@@ -36,7 +36,7 @@ Quick Start
 
 Running With Single Node Air-Gapped Rancher & Air-Gapped Harvester Node
 -----------
-1.  Edit the `settings.yml` to change:
+1.  Edit the `settings_airgap.yml` to change:
     - `rancher_config.run_single_node_air_gapped_rancher` to `true`
     - `harvester_network_config.offline` to `true`
     - `harvester_cluster_nodes` to `3`
