@@ -2,6 +2,8 @@
 
 require 'yaml'
 
+VAGRANT_EXPERIMENTAL = "disks"
+
 VAGRANTFILE_API_VERSION = "2"
 
 # check for required plugins
@@ -47,6 +49,34 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Use ansible to install server
     pxe_server.vm.provision :ansible do |ansible|
       ansible.playbook = 'ansible/setup_pxe_server.yml'
+      ansible.verbose ="vvv"
+      ansible.extra_vars = {
+        settings: @settings
+      }
+    end
+  end
+
+  config.vm.define :private_docker_registry do |docker_registry|
+    docker_registry.vm.box = 'generic/ubuntu2004'
+    docker_registry.vm.hostname = 'private-docker-registry'
+    docker_registry.vm.disk :disk, size: @settings['private_docker_registry_config']['node_disk_size'], primary: true
+    # default network is eth0
+    # private network becomes eth1
+    docker_registry.vm.network 'private_network',
+      libvirt__network_name: 'harvester',
+      mac: @settings['private_docker_registry_config']['harvester_subnet_ip_mac']
+    docker_registry.vm.provider :libvirt do |libvirt|
+      libvirt.cpu_mode = 'host-passthrough'
+      libvirt.memory = @settings['private_docker_registry_config']['memory']
+      # libvirt.storage :file,
+      #   size: @settings['private_docker_registry_config']['node_disk_size'],
+      #   type: 'qcow2',
+      #   bus: 'virtio',
+      #   device: 'vdb',
+      #   serial: 'bdef2c36-cfab-4f75-b0f5-7bdae75417de'
+    end
+    docker_registry.vm.provision :ansible do |ansible|
+      ansible.playbook = 'ansible/setup_docker_registry.yml'
       ansible.verbose ="vvv"
       ansible.extra_vars = {
         settings: @settings

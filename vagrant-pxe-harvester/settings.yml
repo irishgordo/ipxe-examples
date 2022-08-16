@@ -12,10 +12,16 @@
 # Harvester media to install. The URL scheme can be either 'http', 'https', or
 # 'file'. If the URL scheme is 'file', the given media will be copied from the
 # local file system instead of downloading from a remote location.
-harvester_iso_url: https://releases.rancher.com/harvester/master/harvester-master-amd64.iso
-harvester_kernel_url: https://releases.rancher.com/harvester/master/harvester-master-vmlinuz-amd64
-harvester_ramdisk_url: https://releases.rancher.com/harvester/master/harvester-master-initrd-amd64
-harvester_rootfs_url: https://releases.rancher.com/harvester/master/harvester-master-rootfs-amd64.squashfs
+#harvester_iso_url: https://releases.rancher.com/harvester/master/harvester-master-amd64.iso
+#harvester_kernel_url: https://releases.rancher.com/harvester/master/harvester-master-vmlinuz-amd64
+#harvester_ramdisk_url: https://releases.rancher.com/harvester/master/harvester-master-initrd-amd64
+#harvester_rootfs_url: https://releases.rancher.com/harvester/master/harvester-master-rootfs-amd64.squashfs
+
+harvester_iso_url: https://releases.rancher.com/harvester/v1.0.3-rc2/harvester-v1.0.3-rc2-amd64.iso
+harvester_kernel_url: https://releases.rancher.com/harvester/v1.0.3-rc2/harvester-v1.0.3-rc2-vmlinuz-amd64
+harvester_ramdisk_url: https://releases.rancher.com/harvester/v1.0.3-rc2/harvester-v1.0.3-rc2-initrd-amd64 
+harvester_rootfs_url: https://releases.rancher.com/harvester/v1.0.3-rc2/harvester-v1.0.3-rc2-rootfs-amd64.squashfs
+
 
 #
 # harvester_cluster_nodes
@@ -121,6 +127,20 @@ harvester_dashboard:
   # NOTE: admin_password must be greater than or equal to 12 characters in length
   admin_password: testtesttest
 
+#
+# docker registry
+# Docker Registry Config
+private_docker_registry_config:
+  # need to wrap in quotes
+  node_disk_size: "200GB"
+  cpu: 4
+  memory: 8096
+  # also just the hostname/server-name through dhcp
+  registry_domain: myregistry.local
+  harvester_subnet_ip: 192.168.0.66
+  harvester_subnet_ip_mac: 02:29:F9:43:92:94
+
+
 
 #
 # rancher_config
@@ -143,9 +163,9 @@ rancher_config:
   # IMPORTANT: NOTE - it will work with 2.6.5 & 2.6.6, but it "installs" by first installing
   # 2.6.4, then upgrading to either 2.6.5 or 2.6.6
   # the rancher version with it's prefix
-  rancher_version: v2.6.6
+  rancher_version: v2.6.7-rc6
   # the rancher version without it's prefix
-  rancher_version_no_prefix: 2.6.6
+  rancher_version_no_prefix: 2.6.7-rc6
   # k9s_version: v0.25.18
   # mac address of the harvester network card for dhcp on harvester network to work 
   mac_address_harvester_network: 02:29:F9:43:92:95

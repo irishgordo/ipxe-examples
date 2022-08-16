@@ -29,6 +29,15 @@ subnet {{ settings['harvester_network_config']['dhcp_server']['subnet'] }} netma
     }
 }
 
+{% if settings['rancher_config']['run_single_node_air_gapped_rancher'] %}
+host docker_registry_node {
+    hardware ethernet {{ settings['private_docker_registry_config']['harvester_subnet_ip_mac'] }};
+    fixed-address {{ settings['private_docker_registry_config']['harvester_subnet_ip'] }};
+    server-name "{{ settings['private_docker_registry_config']['registry_domain'] }}";
+}
+{% endif %}
+
+
 {% if settings['rancher_config']['run_single_node_rancher'] %}
 host rancher_node {
     hardware ethernet {{ settings['rancher_config']['mac_address_harvester_network'] }};
