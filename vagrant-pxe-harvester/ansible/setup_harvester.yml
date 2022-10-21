@@ -35,14 +35,14 @@
     set_fact:
       pxe_server_ip: "{{ get_pxe_server_ip_result.stdout }}"
 
-  - name: wait for PXE server HTTP port to get ready
-    uri:
-      url: "http://{{ pxe_server_ip }}/harvester/config-create.yaml"
-      status_code: 200
-    register: pxe_server_http_result
-    until: pxe_server_http_result.status == 200
-    retries: 10
-    delay: 30
+        #  - name: wait for PXE server HTTP port to get ready
+        #uri:
+        #url: "http://{{ pxe_server_ip }}/harvester/config-create.yaml"
+        #status_code: 200
+        #register: pxe_server_http_result
+        #until: pxe_server_http_result.status == 200
+        #retries: 10
+        #delay: 30
 
   - name: boot Harvester nodes
     include: boot_harvester_node.yml

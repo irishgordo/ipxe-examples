@@ -16,13 +16,16 @@ harvester_iso_url: https://releases.rancher.com/harvester/master/harvester-maste
 harvester_kernel_url: https://releases.rancher.com/harvester/master/harvester-master-vmlinuz-amd64
 harvester_ramdisk_url: https://releases.rancher.com/harvester/master/harvester-master-initrd-amd64
 harvester_rootfs_url: https://releases.rancher.com/harvester/master/harvester-master-rootfs-amd64.squashfs
-
+  #harvester_iso_url: https://releases.rancher.com/harvester/v1.1.0-rc2/harvester-v1.1.0-rc2-amd64.iso
+  #harvester_kernel_url: https://releases.rancher.com/harvester/v1.1.0-rc2/harvester-v1.1.0-rc2-vmlinuz-amd64
+  #harvester_ramdisk_url: https://releases.rancher.com/harvester/v1.1.0-rc2/harvester-v1.1.0-rc2-initrd-amd64
+  #harvester_rootfs_url: https://releases.rancher.com/harvester/v1.1.0-rc2/harvester-v1.1.0-rc2-rootfs-amd64.squashfs
 #
 # harvester_cluster_nodes
 #
 # NOTE: keep in mind that you need at least 3 nodes to make a cluster
 #
-harvester_cluster_nodes: 3
+harvester_cluster_nodes: 1
 
 #
 # network_config

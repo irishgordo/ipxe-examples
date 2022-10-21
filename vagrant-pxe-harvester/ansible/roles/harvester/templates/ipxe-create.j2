@@ -1,6 +1,8 @@
 #!ipxe
 
+iflinkwait -t 5000 && echo Detected link on ${ifname} 
+
 kernel http://{{ settings['harvester_network_config']['dhcp_server']['ip'] }}/harvester/harvester-vmlinuz-amd64
 initrd http://{{ settings['harvester_network_config']['dhcp_server']['ip'] }}/harvester/harvester-initrd-amd64
-imgargs harvester-vmlinuz-amd64 initrd=harvester-initrd-amd64 ip={{ boot_interface }}:dhcp net.ifnames=1 rd.cos.disable rd.live.debug=1 rd.noverifyssl root=live:http://{{ hostvars['pxe_server']['ansible_eth0']['ipv4']['address'] }}/harvester/harvester-rootfs-amd64.squashfs console=tty1 harvester.install.automatic=true harvester.install.config_url=http://{{ hostvars['pxe_server']['ansible_eth0']['ipv4']['address'] }}/harvester/config-create.yaml
+imgargs harvester-vmlinuz-amd64 initrd=harvester-initrd-amd64 net.ifnames=1 rd.cos.disable rd.live.debug=1 rd.noverifyssl root=live:http://{{ hostvars['pxe_server']['ansible_eth0']['ipv4']['address'] }}/harvester/harvester-rootfs-amd64.squashfs console=tty1 harvester.install.powerOff=true harvester.install.automatic=true harvester.install.mode=install harvester.install.device=/dev/vda harvester.install.automatic=true harvester.os.password=testtesttest harvester.install.management_interface.interfaces="hwAddr: 02:00:00:0D:62:E2" harvester.install.management_interface.method=dhcp harvester.install.management_interface.bond_options.mode=balance-tlb harvester.install.management_interface.bond_options.miimon=100 harvester.install.mode=create harvester.token=token harvester.os.dns_nameservers="192.168.1.251" harvester.install.vip=192.168.0.131 harvester.install.vip_hw_addr="02:00:00:03:3D:61" harvester.install.vip_mode=dhcp harvester.scheme_version=1 harvester.install.iso_url="http://{{ settings['harvester_network_config']['dhcp_server']['ip'] }}/harvester/harvester-amd64.iso"
 boot
