@@ -22,7 +22,7 @@ harvester_rootfs_url: https://releases.rancher.com/harvester/master/harvester-ma
 #
 # NOTE: keep in mind that you need at least 3 nodes to make a cluster
 #
-harvester_cluster_nodes: 3
+harvester_cluster_nodes: 1
 
 #
 # network_config
