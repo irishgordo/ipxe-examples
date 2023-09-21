@@ -1,0 +1,377 @@
+kea_server:
+  main_network:
+  # Main DHCPv4 network, the network that the Harvester cluster will be on
+    ip: 192.168.3.254
+    subnet: 192.168.3.0
+    netmask: 255.255.255.0
+    range_start: 192.168.3.50
+    range_end: 192.168.3.130
+    cidr_block: 192.168.3.0/24
+    https: false
+  storage_network:
+  # TODO: implement storage network, not yet implemented
+  # Secondary DHCPv4 network, the network that the Harvester cluster can use
+  # as a storage network for longhorn
+    ip: 192.168.4.254
+    range: 192.168.4.50 192.168.4.130
+    subnet: 192.168.4.0
+    netmask: 255.255.255.0
+    vlan_id: 107
+  storage:
+  # Separate storage drives are set up on Vagrant LibVirt based VM
+  # One drive for each area of storage, Minio (S3 Harvester VM Backups & Custom RKE2 Server),
+  # Caddy file-server (airgap vm images, airgap harvester iso / version.yaml), TFTP (boot artifacts)
+    minio:
+      size: '20G'
+      device: 'vdb'
+      mount_point: /mnt/minio-data
+      folder_name: data
+    caddy_fileserver:
+      size: '30G'
+      device: 'vdc'
+      mount_point: /mnt/caddy-fileserver-data
+      folder_name: data
+    tftp:
+    # May allow us in the future to possibly leverage for pxe-booting vms on Harvester cluster
+      size: '2G'
+      device: 'vdd'
+      mount_point: /mnt/tftp
+      folder_name: tftpboot
+  tftp_config:
+    ipxe_configs_to_download:
+      # This can be modified to a local location if needed if for some reason boot.ipxe org is down or not accessible
+      # from where this is running
+      - "http://boot.ipxe.org/ipxe.efi"
+      - "http://boot.ipxe.org/undionly.kpxe"
+  minio_config:
+  # Minio S3 server, for Harvester VM backups, and RKE2 server
+  # We should ideally keep https: true, as that is required for Custom RKE2 Server backup target
+  # additionally as set to true, it mimics most orgs/users settings
+    web_console_port: 9001
+    api_port: 9000
+    # TODO: HTTP is not yet implemented! Keep as https: true!
+    https: true
+    user: minioadmin
+    password: minioadmin
+    region: sample-test-1
+    minio_cli_client_binary_url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    minio_harvester_vm_backup_bucket_name: harvester-vm-backup-bucket
+    minio_binary_url: https://dl.min.io/server/minio/release/linux-amd64/minio
+    certgen_binary_url: https://github.com/minio/certgen/releases/download/v1.2.1/certgen-linux-amd64
+    access_key: myuserserviceaccount
+    secret_key: myuserserviceaccountsecret
+    giant_json_block_for_harvester: '{"type": "s3", "endpoint": "https://192.168.3.254:9000", "accessKeyId": "myuserserviceaccount", "secretAccessKey": "myuserserviceaccountsecret", "bucketName": "harvester-vm-backup-bucket", "bucketRegion": "sample-test-1", "virtualHostedStyle": false, "cert": ""}'
+  caddy_fileserver_config:
+    # Caddy file-server, more simple than nginx, web-server for just http out of the box
+    http_port: 80
+    https_port: 443
+    # TODO: HTTPS not yet implemented!
+    https: false
+    debug: true
+    # Harvester upgrade media to grab for air-gap upgrade, including building version.yaml dynamically
+    version_metadata_name: master-head
+    harvester_iso_to_download: https://releases.rancher.com/harvester/master/harvester-master-amd64.iso
+    harvester_sha512: https://releases.rancher.com/harvester/master/harvester-master-amd64.sha512
+    harvester_iso_name: harvester-master-amd64.iso
+    # VM Images list, proactively download and toss on Caddy file-server for Harvester to use
+    # Strangely, opensuse has issues downloading at times, so it's commented out for now
+    # TODO: investigate why opensuse has issues downloading, usually... in comparision to ubuntu
+    vm_images_to_download:
+      - https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img
+      - https://download.opensuse.org/repositories/Cloud:/Images:/Leap_15.4/images/openSUSE-Leap-15.4.x86_64-1.0.1-NoCloud-Build2.383.qcow2
+    # Harvester MEDIA for Harvester iPXE/PXE Booting
+    # Harvester media to install. The URL scheme can be either 'http', 'https', or
+    # 'file'. If the URL scheme is 'file', the given media will be copied from the
+    # local file system instead of downloading from a remote location.
+    harvester_folder_name: harvester
+    harvester_iso_url: https://releases.rancher.com/harvester/v1.2.0/harvester-v1.2.0-amd64.iso
+    harvester_kernel_url: https://releases.rancher.com/harvester/v1.2.0/harvester-v1.2.0-vmlinuz-amd64
+    harvester_ramdisk_url: https://releases.rancher.com/harvester/v1.2.0/harvester-v1.2.0-initrd-amd64
+    harvester_rootfs_url: https://releases.rancher.com/harvester/v1.2.0/harvester-v1.2.0-rootfs-amd64.squashfs
+    harvester_new_node_post_upgrade_folder: harvester-new-node-post-upgrade
+    # Harvester upgrade media to grab proactively, if there is the additional node that is added later
+    harvester_new_node_post_upgrade_artifact_list:
+      - https://releases.rancher.com/harvester/master/harvester-master-amd64.iso
+      - https://releases.rancher.com/harvester/master/harvester-master-vmlinuz-amd64
+      - https://releases.rancher.com/harvester/master/harvester-master-initrd-amd64
+      - https://releases.rancher.com/harvester/master/harvester-master-rootfs-amd64.squashfs
+  ntp_server:
+    # NTP server addresses, as Rancher, Registry, & Harvester air-gapped but kea/pxe server
+    # can communicate outbound, set up NTP server to sync time to prevent issues with cluster airgapped
+    ntp_pool_addresses:
+      - pool 0.ubuntu.pool.ntp.org iburst
+      - pool 1.ubuntu.pool.ntp.org iburst
+      - pool 2.ubuntu.pool.ntp.org iburst
+      - pool 3.ubuntu.pool.ntp.org iburst
+    ntp_fallback_server: pool ntp.ubuntu.com
+    driftfile: /var/lib/ntp/ntp.drift
+    # TODO: NTP stats will work but have some performance issues, todo, investigate...
+    enable_stats: false
+    stats_dir: /var/log/ntpstats/
+
+
+
+
+#
+# harvester_cluster_nodes
+#
+# NOTE: keep in mind that you need at least 3 nodes to make a cluster
+#
+harvester_cluster_nodes: 1
+
+#
+# network_config
+#
+# Harvester network configurations. Make sure the cluster IPs are on the same
+# subnet as the DHCP server. Pre-assign the IPs and MACs for the Harvester
+# nodes.
+#
+# NOTE: Random MAC addresses are generated with the following command:
+# printf '02:00:00:%02X:%02X:%02X\n' $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256))
+# Thanks to https://stackoverflow.com/questions/8484877/mac-address-generator-in-python
+# If any of the generated MAC addresses is in conflict with an existing one in
+# your environment, please use the above command to regenerate and replace
+# the conflicting one.
+
+harvester_network_config:
+  # Run as an airgapped environment that only has internet connectivity through an HTTP proxy.
+  # The HTTP proxy runs on DHCP server using port 3128
+  offline: true
+  use_url_for_vip: true
+  harvester_vip_url_desired: harvester-airgap-vip.local
+  dhcp_server:
+    ip: 192.168.3.254
+    subnet: 192.168.3.0
+    netmask: 255.255.255.0
+    range: 192.168.3.50 192.168.3.130
+    https: false
+  # Reserve these IPs for the Harvester cluster. Make sure these are outside
+  # the range of DHCP so they don't get served out by the DHCP server
+  # The Harvester cluster IPs are also represented in the 'inventory' file, so editing these
+  # you would also want to make updates / edits to the inventory file
+  vip:
+    ip: 192.168.3.131
+    mode: DHCP
+    mac: 02:00:00:03:3D:61
+  cluster:
+    - ip: 192.168.3.30
+      mac: 02:00:00:0D:62:E2
+      cpu: 8
+      memory: 16354
+      disk_size: 500G
+      vagrant_interface: ens5
+      mgmt_interface: ens6
+      node_intention: create
+    - ip: 192.168.3.31
+      mac: 02:00:00:35:86:92
+      cpu: 8
+      memory: 16354
+      disk_size: 500G
+      vagrant_interface: ens5
+      mgmt_interface: ens6
+      node_intention: join
+    - ip: 192.168.3.32
+      mac: 02:00:00:2F:F2:2A
+      cpu: 8
+      memory: 16354
+      disk_size: 500G
+      vagrant_interface: ens5
+      mgmt_interface: ens6
+      node_intention: join
+    - ip: 192.168.3.33
+      mac: 02:00:00:A7:E6:FF
+      cpu: 8
+      memory: 16354
+      disk_size: 500G
+      vagrant_interface: ens5
+      mgmt_interface: ens6
+      node_intention: join
+
+#
+# harvester_config
+#
+# Harvester system configurations.
+#
+harvester_config:
+  # static token for cluster authentication
+  token: token
+
+  # Public keys to add to authorized_keys of each node.
+  ssh_authorized_keys:
+    # Vagrant default unsecured SSH public key & additionally add somewhere to have public keys available
+    - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+    # Additionally add somewhere to have public keys available
+    #- github:your_github_username
+
+  # password to for the `rancher` user to login to the Harvester nodes
+  password: p@ssword
+
+  dns_nameservers:
+    - 192.168.3.254
+
+  addons:
+    vm_import_controller: false
+    pcidevices_controller: false
+    rancher_monitoring: false
+    rancher_logging: false
+    harvester_seeder: false
+
+  # NTP servers
+  # Reference self-created NTP server
+  ntp_servers:
+    - 192.168.3.254
+
+#
+# harvester_dashboard
+#
+# This sets the admin password for the Harvester Dashboard/web-ui upon provisioning
+#
+harvester_dashboard:
+  admin_user: admin
+  # NOTE: admin_password must be greater than or equal to 12 characters in length
+  admin_password: testtesttest
+
+
+#
+# rancher_config
+#
+# Rancher configurations
+# (see Troubleshooting & Known Issues in README)
+# rancher_config:
+#   # disk size of single instance rancher node, this is split into two partitions at 50/50
+#   node_disk_size: 350G
+#   run_single_node_rancher: true
+#   # to determine to run air_gapped rancher, run_single_node_rancher must be enabled, if set to: false -
+#   # it will create a non-airgapped single node rancher instance
+#   # harvester offline must be true to fully air-gap both
+#   run_single_node_air_gapped_rancher: true
+#   # cert-manager version, for the jetstack.io repo
+#   cert_manager_version: v1.7.1
+#   # url escaped k3s version for grabbing k3s
+#   k3s_url_escaped_version: v1.23.6%2Bk3s1
+#   # K9s version
+#   k9s_version: v0.26.3
+#   # IMPORTANT: "TRUE" RANCHER AIRGAPPED ONLY WORKS WITH 2.6.4 -> 2.6.4-rc-*
+#   # IMPORTANT: NOTE - it will work with 2.6.5 & 2.6.6, but it "installs" by first installing
+#   # 2.6.4, then upgrading to either 2.6.5 or 2.6.6
+#   # the rancher version with it's prefix
+#   rancher_version: v2.6.11
+#   # the rancher version without it's prefix
+#   rancher_version_no_prefix: 2.6.11
+#   # k9s_version: v0.25.18
+#   # mac address of the harvester network card for dhcp on harvester network to work
+#   mac_address_harvester_network: 02:29:F9:43:92:95
+#   # if this ip changes, update it in the inventories/vagrant file for the rancher_box
+#   # we interact with the libvirt vm on this IP via ansible, then shut off eth0 which provides a temp network out
+#   # you'll also need to change the ip, listed in the DHCP configuration, since 192.168.0.34 is directly tied to it
+#   node_harvester_network_ip: 192.168.2.34
+#   cpu: 8
+#   memory: 20000
+#   # rancher_install_domain, where the domain of the rancher install via helm templating and kubectl -R -f applying is
+#   # NOTE: as long as it ends in *.local it should work, hostname resolution on the rancher instance comes from avahi-daemon
+#   rancher_install_domain: rancher-vagrant-vm.local
+#   # registry_domain is the docker domain that get's set up, it can be anything as long as it ends in a ".local"
+#   registry_domain: myregistry.local
+#   # bootstrap password
+#   bootstrap_password: rancher
+#   # replicas desired
+#   rancher_replicas: 3
+
+
+#
+# harvester_node_config
+#
+# Harvester node-specific configurations.
+#
+harvester_node_config:
+  # number of CPUs assigned to each node
+  cpu: 8
+
+  # memory size for each node, in MBytes
+  memory: 16354
+
+  # disk size for each node
+  disk_size: 500G
+
+dnsmasq:
+  # network:
+  #   ip: 192.168.3.52
+  #   mac: 02:00:00:F2:D4:97
+  overall_subdomain_structure: airgapped.localdomain
+  rancher:
+    domain: rancher.airgapped.localdomain
+    ip: 192.168.3.34
+  harvester:
+    domain: harvester-vip.airgapped.localdomain
+    ip: 192.168.3.131
+  kea:
+    domain: kea-server.airgapped.localdomain
+    ip: 192.168.3.254
+  registry:
+    domain: registry.airgapped.localdomain
+    ip: 192.168.3.100
+    mac: 02:00:00:FA:01:F8
+  # TODO: future impl
+  elasticsearch:
+    domain: elasticsearch.airgapped.localdomain
+    ip: 192.168.3.99
+  kibana:
+    domain: kibanna.airgapped.localdomain
+    ip: 192.168.3.98
+
+docker_registry:
+  # Docker registry, for air-gapped registry
+  domain_name: airgap-docker-registry.local
+  containerd_json_block: '{"Mirrors":{"docker.io":{"Endpoints":["https://airgap-docker-registry.local:5000"],"Rewrites":null}},"Configs":{"airgap-docker-registry.local:5000":{"TLS":{"InsecureSkipVerify":true}}}}'
+  cpus: '4'
+  memory: '16584'
+  certgen_binary_url: https://github.com/minio/certgen/releases/download/v1.2.1/certgen-linux-amd64
+  ip: "192.168.3.100"
+  mac: 02:00:00:FA:01:F8
+  domain: airgap-docker-registry.localdomain
+  rancher_upgrade_images_text: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-images.txt
+  rancher_upgrade_images_save_sh: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-save-images.sh
+  rancher_upgrade_images_load_sh: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-load-images.sh
+  rancher_initial_images_text: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-images.txt
+  rancher_initial_images_save_sh: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-save-images.sh
+  rancher_initial_images_load_sh: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-load-images.sh
+  k3s_initial_images_text_url: https://github.com/k3s-io/k3s/releases/download/v1.25.13%2Bk3s1/k3s-images.txt
+  k3s_upgrade_images_text_url: https://github.com/k3s-io/k3s/releases/download/v1.26.8%2Bk3s1/k3s-images.txt
+  cert_manager_images:
+    - quay.io/jetstack/cert-manager-cainjector:v1.0.0
+    - quay.io/jetstack/cert-manager-controller:v1.0.0
+    - quay.io/jetstack/cert-manager-webhook:v1.0.0
+  storage:
+    host_docker:
+      size: '300G'
+      device: 'vdb'
+      mount_point: /mnt/docker/storage
+    docker_registry:
+      size: '300G'
+      device: 'vdc'
+      mount_point: /var/lib/registry
+
+rancher_node:
+  ip: "192.168.3.34"
+  mac: 02:00:00:1C:8B:E8
+  domain: airgap-rancher-node.localdomain
+  cpus: '4'
+  memory: '16584'
+  k3s_binary_url: https://github.com/k3s-io/k3s/releases/download/v1.25.13%2Bk3s1/k3s
+  k3s_initial_version: v1.25.13+k3s1
+  k3s_script_url: https://get.k3s.io/
+  cert_manager_version_to_install: v1.0.0
+  helm_binary_url: https://get.helm.sh/helm-v3.13.2-linux-amd64.tar.gz
+  cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v1.0.0/cert-manager.crds.yaml
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.crds.yaml
+  rancher_initial_version_desired: v2.7.6
+  rancher_version_no_v: 2.7.6
+  rancher_helm_repo_to_use: rancher-stable/rancher
+  rancher_replica_count: 3
+  rancher_bootstrap_password: testtesttest
+  rancher_psp_enabled: false
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+
+main_dns: 192.168.3.254
+alternate_dns: 1.1.1.1

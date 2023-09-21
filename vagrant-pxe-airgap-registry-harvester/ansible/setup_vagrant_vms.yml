@@ -1,0 +1,88 @@
+---
+- name: Setup Vagrant VMs
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+  - name: create "Installing Kea Server" message
+    ansible.builtin.shell: >
+      echo "Installing Kea Server"
+    register: kea_server_message
+
+  - name: kea Server
+    ansible.builtin.debug:
+      msg: "{{ kea_server_message.stdout }}"
+
+  - name: install Kea server
+    ansible.builtin.shell: >
+      VAGRANT_LOG=info vagrant up pxe_server_kea
+    register: pxe_server_kea_installation_result
+
+  - name: Kea server installation result
+    ansible.builtin.debug:
+      msg: "{{ pxe_server_kea_installation_result.stdout }}"
+
+  - name: get the IP address of kea pxe_server
+    shell: |
+      vagrant ssh-config pxe_server_kea 2>/dev/null | grep HostName | awk '{ print $2 }'
+    register: get_pxe_server_ip_result
+    until: get_pxe_server_ip_result != ""
+    retries: 10
+    delay: 60
+
+  - name: set pxe_server_ip fact
+    set_fact:
+      pxe_server_ip: "{{ get_pxe_server_ip_result.stdout }}"
+
+  - name: wait for PXE server HTTP port to get ready
+    uri:
+      url: "http://{{ pxe_server_ip }}/harvester/config-create.yaml"
+      status_code: 200
+    register: pxe_server_http_result
+    until: pxe_server_http_result.status == 200
+    retries: 10
+    delay: 30
+
+  - name: create docker registry message
+    ansible.builtin.shell: >
+      echo "Creating docker registry"
+    register: docker_registry_message
+
+  - name: debug docker registry message
+    ansible.builtin.debug:
+      msg: "{{ docker_registry_message.stdout }}"
+
+  - name: create docker registry
+    ansible.builtin.shell: >
+      VAGRANT_LOG=debug vagrant up docker_registry
+    register: docker_registry_installation_result
+
+  - name: create "installing k3s and rancher on node" message
+    shell: >
+      figlet "installing k3s and rancher on node" 2>/dev/null || echo "installing k3s and rancher on node"
+    register: figlet_result
+
+  - name: print installing k3s and rancher on node
+    debug:
+      msg: "{{ figlet_result.stdout }}"
+
+  - name: install k3s and rancher on node
+    shell: >
+      VAGRANT_LOG=debug vagrant up rancher_node
+    register: rancher_node_installation_result
+
+  - name: debug rancher node installation result
+    debug:
+      msg: "{{ rancher_node_installation_result.stdout }}"
+    ignore_errors: true
+
+  - name: boot Harvester nodes
+    include: boot_harvester_node.yml
+    vars:
+      node_number: "{{ item }}"
+    with_sequence: 0-{{ harvester_cluster_nodes|int - 1 }}
+
+  - name: Get the public VIP of the harvester cluster
+    set_fact:
+      harvester_public_endpoint:  "{{ harvester_network_config.vip.ip }}"

@@ -1,0 +1,23 @@
+- name: Configure VM Further
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Configuring VM Further.."
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: disk configuration provisioning
+      ansible.builtin.include_tasks: disk_config.yml
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in configuring vm further'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

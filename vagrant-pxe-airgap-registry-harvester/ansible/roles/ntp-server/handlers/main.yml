@@ -1,0 +1,17 @@
+---
+- name: Handle NTP Server Reload block
+  block:
+    - name: restart ntp
+      ansible.builtin.systemd:
+        name: ntp
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in setting up ntp server'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

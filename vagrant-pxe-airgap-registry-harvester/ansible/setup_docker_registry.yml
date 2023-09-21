@@ -1,0 +1,7 @@
+- hosts: all
+  become: yes
+  roles:
+    - role: disk-config
+    - role: docker
+    - role: seed-docker-registry
+    - role: set-default-provisioning-route

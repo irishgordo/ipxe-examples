@@ -1,0 +1,15 @@
+- hosts: all
+  become: yes
+  roles:
+    - role: ntp-server
+    - role: kea-config-management
+    - role: minio
+      vars:
+        additional_ca_to_snag: ''
+    - role: caddy
+    - role: squid-proxy
+    - role: tftp
+    - role: ipxe
+    - role: harvester
+    - role: dnsmasq
+    - role: dhcp

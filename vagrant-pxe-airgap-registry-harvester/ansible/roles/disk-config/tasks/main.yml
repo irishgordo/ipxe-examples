@@ -1,0 +1,148 @@
+---
+- name: Configure VM Disks And Base Packages
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Installing packages and configuring disks..."
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: disk configuration provisioning
+      ansible.builtin.apt:
+        update_cache: yes
+        pkg:
+          - parted
+          - fdisk
+          - gnupg2
+          - neovim
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - wget
+          - net-tools
+          - htop
+          - software-properties-common
+          - qemu-guest-agent
+        state: present
+      register: snagged_packages_result
+
+    - name: debug the packages
+      ansible.builtin.debug:
+        msg: "{{ snagged_packages_result }}"
+      ignore_errors: true
+
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Configuring disks..."
+      register: configuring_disks_msg
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: configuring_disks_msg
+        verbosity: 2
+
+    - name: build partition table for host_docker
+      community.general.parted:
+        device: /dev/{{ settings.docker_registry.storage.host_docker.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_host_docker
+
+    - name: debug the partition table for host_docker
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_host_docker }}"
+
+    - name: create filesystem for vagrant registry
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/{{ settings.docker_registry.storage.host_docker.device }}1
+      register: filesystem_result_host_docker
+
+    - name: debug the create filesystem for host_docker
+      ansible.builtin.debug:
+        msg: "{{ filesystem_result_host_docker }}"
+      ignore_errors: true
+
+    - name: create mount point directory for host_docker
+      ansible.builtin.file:
+        path: "{{ settings.docker_registry.storage.host_docker.mount_point }}"
+        state: directory
+      register: mount_point_result_host_docker
+
+    - name: mount host_docker data point
+      ansible.posix.mount:
+        path: "{{ settings.docker_registry.storage.host_docker.mount_point }}"
+        src: /dev/{{ settings.docker_registry.storage.host_docker.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_host_docker
+
+    - name: debug the mount host_docker data point
+      ansible.builtin.debug:
+        msg: "{{ mount_result_host_docker }}"
+      ignore_errors: true
+
+    - name: build partition table for docker_registry
+      community.general.parted:
+        device: /dev/{{ settings.docker_registry.storage.docker_registry.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_docker_registry
+
+    - name: debug the partition table for docker_registry
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_docker_registry }}"
+
+    - name: create filesystem for docker_registry
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/{{ settings.docker_registry.storage.docker_registry.device }}1
+      register: filesystem_result_docker_registry
+
+    - name: debug the create filesystem for docker_registry
+      ansible.builtin.debug:
+        msg: "{{ filesystem_result_docker_registry }}"
+      ignore_errors: true
+
+    - name: create mount point directory for docker_registry
+      ansible.builtin.file:
+        path: "{{ settings.docker_registry.storage.docker_registry.mount_point }}"
+        state: directory
+      register: mount_point_result_docker_registry
+
+    - name: mount docker_registry data point
+      ansible.posix.mount:
+        path: "{{ settings.docker_registry.storage.docker_registry.mount_point }}"
+        src: /dev/{{ settings.docker_registry.storage.docker_registry.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_docker_registry
+
+    - name: debug the mount docker_registry data point
+      ansible.builtin.debug:
+        msg: "{{ mount_result_docker_registry }}"
+      ignore_errors: true
+
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in configuring disks'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

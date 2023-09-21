@@ -1,0 +1,13 @@
+services:
+  registry:
+    restart: always
+    image: registry:2
+    ports:
+      - {{ settings['docker_registry']['ip'] }}:5000:5000
+    environment:
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/public.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/private.key
+    volumes:
+      - {{ settings['docker_registry']['storage']['docker_registry']['mount_point'] }}:/var/lib/registry
+      - /home/vagrant/certs:/certs
+      - /home/vagrant/config.yml:/etc/docker/registry/config.yml

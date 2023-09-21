@@ -1,0 +1,41 @@
+- name: fix resolv.conf
+  ansible.builtin.copy:
+    src: resolv.conf
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: install dnsmasq package
+  ansible.builtin.apt:
+    name: dnsmasq
+    state: present
+
+- name: make sure dnsmasq is not running
+  ansible.builtin.service:
+    name: dnsmasq.service
+    state: stopped
+    enabled: no
+
+- name: move template dnsmasq.conf to etc/dnsmasq.d
+  ansible.builtin.template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/dnsmasq.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: template over the hosts file to /etc/hosts
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: enable systemd for dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq.service
+    enabled: yes
+    state: started
+    daemon_reload: yes

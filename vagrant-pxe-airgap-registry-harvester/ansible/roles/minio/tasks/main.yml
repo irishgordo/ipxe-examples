@@ -1,0 +1,152 @@
+- name: Setup Minio
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "setting up minio"
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: Ensure group "minio-user" exists
+      ansible.builtin.group:
+        name: minio-user
+        state: present
+
+    - name: Ensure user "minio-user" exists
+      ansible.builtin.user:
+        name: minio-user
+        group: minio-user
+        state: present
+        shell: /bin/bash
+        createhome: yes
+        home: /home/minio-user
+        system: yes
+        append: yes
+
+    - name: Ensure directory "/home/minio-user" exists
+      ansible.builtin.file:
+        path: /home/minio-user
+        state: directory
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+
+    - name: Ensure directory "/home/minio-user/.minio" exists
+      ansible.builtin.file:
+        path: /home/minio-user/.minio
+        state: directory
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+
+    - name: Build directory data on minio storage mount_point
+      ansible.builtin.file:
+        path: "{{ settings.kea_server.storage.minio.mount_point }}/data"
+        state: directory
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+
+    - name: download certgen binary
+      ansible.builtin.get_url:
+        url: "{{ settings.kea_server.minio_config.certgen_binary_url }}"
+        dest: /usr/local/bin/certgen
+        mode: +x
+
+    - name: build minio tmp directory
+      ansible.builtin.file:
+        path: /tmp/minio
+        state: directory
+        owner: minio-user
+        group: minio-user
+
+    - name: build minio cert
+      ansible.builtin.shell: >
+        cd /tmp/minio && /usr/local/bin/certgen -host "{{ settings.kea_server.main_network.ip }}"
+      register: build_minio_cert_result
+
+    - name: build minio-user .minio certs directory
+      ansible.builtin.file:
+        path: /home/minio-user/.minio/certs
+        state: directory
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+
+    - name: copy public.crt from the tmp/minio directory to the minio-user home directory
+      ansible.builtin.copy:
+        src: /tmp/minio/public.crt
+        dest: /home/minio-user/.minio/certs
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+        remote_src: true
+
+    - name: cat the public.crt file stash in global variable
+      ansible.builtin.shell: |
+        cat /home/minio-user/.minio/certs/public.crt
+      register: additional_ca_to_snag
+
+    - name: copy private.key from the tmp/minio directory to the minio=user home directory
+      ansible.builtin.copy:
+        src: /tmp/minio/private.key
+        dest: /home/minio-user/.minio/certs
+        owner: minio-user
+        group: minio-user
+        mode: '0755'
+        remote_src: true
+
+    - name: download minio from minio_binary_url
+      ansible.builtin.get_url:
+        url: "{{ settings.kea_server.minio_config.minio_binary_url }}"
+        dest: /usr/local/bin/minio
+        mode: +x
+
+    - name: copy over the minio service file
+      ansible.builtin.copy:
+        src: minio.service
+        dest: /etc/systemd/system/minio.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: template copy over the etc minio vars file
+      ansible.builtin.template:
+        src: minio.j2
+        dest: /etc/default/minio
+        owner: root
+        group: root
+        force: yes
+
+    - name: reload the minio.service systemd service
+      ansible.builtin.systemd:
+        name: minio.service
+        enabled: yes
+        state: reloaded
+        daemon_reload: yes
+
+    - name: download the minio admin client binary from minio_cli_client_binary_url
+      ansible.builtin.get_url:
+        url: "{{ settings.kea_server.minio_config.minio_cli_client_binary_url }}"
+        dest: /usr/local/bin/mc
+        mode: +x
+
+    - name: create the minio bucket, the access key
+      ansible.builtin.shell: |
+        /usr/local/bin/mc alias set minio https://{{ settings.kea_server.main_network.ip }}:{{ settings.kea_server.minio_config.api_port }} "{{ settings.kea_server.minio_config.user }}" "{{ settings.kea_server.minio_config.password }}" --api S3v4 --insecure
+        /usr/local/bin/mc mb minio/{{ settings.kea_server.minio_config.minio_harvester_vm_backup_bucket_name }} --region "{{ settings.kea_server.minio_config.region }}" --insecure
+        /usr/local/bin/mc admin user svcacct add --access-key {{ settings.kea_server.minio_config.access_key }} --secret-key {{ settings.kea_server.minio_config.secret_key }} minio {{ settings.kea_server.minio_config.user }} --insecure
+      register: create_minio_bucket_result
+
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in configuring vm further'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

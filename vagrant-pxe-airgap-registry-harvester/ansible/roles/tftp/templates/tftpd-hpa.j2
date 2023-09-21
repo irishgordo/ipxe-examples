@@ -1,0 +1,4 @@
+TFTP_USERNAME="tftp"
+TFTP_DIRECTORY="{{ settings['kea_server']['storage']['tftp']['mount_point'] }}/{{ settings['kea_server']['storage']['tftp']['folder_name'] }}"
+TFTP_ADDRESS="{{ settings['kea_server']['main_network']['ip'] }}:69"
+TFTP_OPTIONS="--secure"

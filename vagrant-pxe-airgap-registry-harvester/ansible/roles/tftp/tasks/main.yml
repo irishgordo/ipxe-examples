@@ -1,0 +1,16 @@
+---
+- name: install tftpd-hpa
+  ansible.builtin.apt:
+    name: tftpd-hpa
+    state: present
+
+- name: create tftp root
+  ansible.builtin.file:
+    path: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}"
+    state: directory
+
+- name: configure tftp
+  ansible.builtin.template:
+    src: tftpd-hpa.j2
+    dest: /etc/default/tftpd-hpa
+  notify: restart tftp

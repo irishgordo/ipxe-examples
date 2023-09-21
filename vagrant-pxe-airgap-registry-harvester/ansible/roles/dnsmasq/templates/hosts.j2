@@ -1,0 +1,16 @@
+127.0.0.1	localhost
+127.0.1.1	debian
+
+# The following lines are desirable for IPv6 capable hosts
+::1     localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+
+127.0.0.1 debian10.localdomain {{ settings['dnsmasq']['kea']['domain'] }}
+
+127.0.2.1 pxe-server-kea pxe-server-kea
+{{ settings['dnsmasq']['rancher']['ip'] }} {{ settings['dnsmasq']['rancher']['domain'] }}
+{{ settings['dnsmasq']['registry']['ip'] }} {{ settings['dnsmasq']['registry']['domain'] }}
+{{ settings['dnsmasq']['harvester']['ip'] }} {{ settings['dnsmasq']['harvester']['domain'] }}
+{{ settings['dnsmasq']['elasticsearch']['ip'] }} {{ settings['dnsmasq']['elasticsearch']['domain'] }}
+{{ settings['dnsmasq']['kibana']['ip'] }} {{ settings['dnsmasq']['kibana']['domain'] }}

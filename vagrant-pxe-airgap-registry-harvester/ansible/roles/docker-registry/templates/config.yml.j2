@@ -1,0 +1,12 @@
+version: 0.1
+log:
+  accesslog:
+    disabled: false
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    envirnment: airgap
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry

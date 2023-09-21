@@ -1,0 +1,98 @@
+# example from https://github.com/harvester/ipxe-examples/blob/main/general/config-create.yaml
+
+{% if  (settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] == 'https://releases.rancher.com/harvester/v1.0.3/harvester-v1.0.3-amd64.iso') or (settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] == 'https://releases.rancher.com/harvester/v1.0.2/harvester-v1.0.2-amd64.iso') or (settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] == 'https://releases.rancher.com/harvester/v1.0.1/harvester-v1.0.1-amd64.iso') or (settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] == 'https://releases.rancher.com/harvester/v1.0.0/harvester-v1.0.0-amd64.iso')  %}
+token: {{ settings['harvester_config']['token'] }}
+os:
+  hostname: harvester-node-0
+  ssh_authorized_keys:
+{% for ssh_key in settings['harvester_config']['ssh_authorized_keys'] %}
+    - {{ ssh_key }}
+{% endfor %}
+  password: {{ settings['harvester_config']['password'] }}
+  ntp_servers:
+{% for ntp_server in settings['harvester_config']['ntp_servers'] %}
+    - {{ ntp_server }}
+{% endfor %}
+install:
+  mode: create
+  networks:
+    harvester-mgmt:
+      interfaces:
+      - name: {{ settings['harvester_network_config']['cluster'][0]['mgmt_interface'] }}  # The management interface name
+      method: dhcp
+    bond0:
+      interfaces:
+      - name: {{ settings['harvester_network_config']['cluster'][0]['vagrant_interface'] }}
+      method: dhcp
+  device: /dev/vda       # The target disk to install
+  iso_url: http://{{ settings['kea_server']['main_network']['ip'] }}/harvester/harvester-amd64.iso
+#  tty: ttyS1,115200n8   # For machines without a VGA console
+  tty: ttyS0
+  vip: {{ settings['harvester_network_config']['vip']['ip'] }}
+  vip_mode: {{ settings['harvester_network_config']['vip']['mode'] }}
+  vip_hw_addr: {{ settings['harvester_network_config']['vip']['mac'] }}
+{% if settings['harvester_network_config']['offline'] %}
+systemSettings:
+  ui-source: bundled
+{% endif %}
+{% else %}
+scheme_version: 1
+token: {{ settings['harvester_config']['token'] }}
+os:
+  hostname: harvester-node-0
+  ssh_authorized_keys:
+{% for ssh_key in settings['harvester_config']['ssh_authorized_keys'] %}
+    - {{ ssh_key }}
+{% endfor %}
+  password: {{ settings['harvester_config']['password'] }}
+  ntp_servers:
+{% for ntp_server in settings['harvester_config']['ntp_servers'] %}
+    - {{ ntp_server }}
+{% endfor %}
+  dns_nameservers:
+{% for dns_server in settings['harvester_config']['dns_nameservers'] %}
+    - {{ dns_server }}
+{% endfor %}
+install:
+  mode: create
+  management_interface:
+    interfaces:
+    - name: {{ settings['harvester_network_config']['cluster'][0]['mgmt_interface'] }}  # The management interface name
+    method: dhcp
+  device: /dev/vda       # The target disk to install
+  iso_url: http://{{ settings['kea_server']['main_network']['ip'] }}/harvester/harvester-amd64.iso
+#  tty: ttyS1,115200n8   # For machines without a VGA console
+  tty: ttyS0
+  vip: {{ settings['harvester_network_config']['vip']['ip'] }}
+  vip_mode: {{ settings['harvester_network_config']['vip']['mode'] }}
+  vip_hw_addr: {{ settings['harvester_network_config']['vip']['mac'] }}
+{% if  (settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] == 'https://releases.rancher.com/harvester/v1.1.2/harvester-v1.1.2-amd64.iso') %}
+{% else %}
+  addons:
+    harvester_vm_import_controller:
+      enabled: {{ settings['harvester_config']['addons']['vm_import_controller'] }}
+      values_content: ""
+    harvester_pcidevices_controller:
+      enabled: {{ settings['harvester_config']['addons']['pcidevices_controller'] }}
+      values_content: ""
+    rancher_monitoring:
+      enabled: {{ settings['harvester_config']['addons']['rancher_monitoring'] }}
+      values_content: ""
+    rancher_logging:
+      enabled: {{ settings['harvester_config']['addons']['rancher_logging'] }}
+      values_content: ""
+    harvester_seeder:
+      enabled: {{ settings['harvester_config']['addons']['harvester_seeder'] }}
+      values_content: ""
+{% endif %}
+{% if settings['harvester_network_config']['offline'] %}
+system_settings:
+  ui-source: bundled
+  additional-ca: |
+    {{ additional_ca_to_snag.stdout | indent( width=4, first=false ) }}
+  containerd-registry: '{{ settings['docker_registry']['containerd_json_block'] }}'
+  backup-target: '{{ settings['kea_server']['minio_config']['giant_json_block_for_harvester'] }}'
+{% endif %}
+{% endif %}
+
+

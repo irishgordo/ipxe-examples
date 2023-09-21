@@ -1,0 +1,25 @@
+"DhcpDdns": {
+    "ip-address": "{{ settings['kea_server']['main_network']['ip'] }}",
+    "port": 53001,
+    "dns-server-timeout": 500,
+    "ncr-protocol": "UDP",
+    "ncr-format": "JSON",
+    "tsig-keys": [ ],
+    "forward-ddns": {
+        "ddns-domains": [
+            {
+                "name": "{{ settings['dnsmasq']['overall_subdomain_structure'] }}",
+                "key-name": "",
+                "dns-servers": [
+                    {
+                        "ip-address": "{{ settings['kea_server']['main_network']['ip'] }}",
+                        "port": 53
+                    }
+                ]
+            }
+        ]
+    },
+    "reverse-ddns": {
+        "ddns-domains": [ ]
+    }
+}

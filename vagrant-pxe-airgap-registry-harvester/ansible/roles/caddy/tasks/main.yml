@@ -1,0 +1,130 @@
+- name: Setup Caddy to serve files
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Set up Caddy to server files.."
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: install additional packages needed via apt
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - debian-keyring
+        - debian-archive-keyring
+        - apt-transport-https
+
+    - name: add caddy gpg key to host
+      ansible.builtin.apt_key:
+        url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+        state: present
+
+    - name: add caddy to etc sources list
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+        state: present
+
+    - name: install caddy
+      ansible.builtin.apt:
+        name: caddy
+        state: present
+        update_cache: true
+
+    - name: stop caddy systemd service
+      ansible.builtin.systemd:
+        name: caddy.service
+        state: stopped
+        daemon_reload: yes
+        enabled: yes
+
+    - name: copy over the Caddyfile template to /etc/caddy/Caddyfile and overwrite force if needed
+      ansible.builtin.template:
+        src: Caddyfile.j2
+        dest: /etc/caddy/Caddyfile
+        owner: caddy
+        group: caddy
+        mode: '0644'
+        force: yes
+
+    - name: copy over the version.yaml template to the caddy directory
+      ansible.builtin.template:
+        src: version.yaml.j2
+        dest: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/version.yaml"
+        owner: caddy
+        group: caddy
+        mode: '0644'
+
+    - name: download artifacts into the caddy_fileserver mount_point do our best but ignore errors for now
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/{{ item | basename }}"
+        owner: caddy
+        group: caddy
+      loop:
+        - "{{ settings.kea_server.caddy_fileserver_config.harvester_iso_to_download }}"
+        - "{{ settings.kea_server.caddy_fileserver_config.harvester_sha512 }}"
+      ignore_errors: true
+
+    - name: loop over the vm images and download them into the caddy_fileserver mount_point again try our best but ignore errors for now
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/{{ item | basename }}"
+        owner: caddy
+        group: caddy
+      loop: "{{ settings.kea_server.caddy_fileserver_config.vm_images_to_download }}"
+      ignore_errors: true
+
+    - name: head the sha512 sum file and keep the result
+      ansible.builtin.shell: |
+        head -n 1 {{ settings.kea_server.storage.caddy_fileserver.mount_point }}/*sha512 | grep -o '^\S*'
+      register: head_the_sha512_sum_file_result
+
+    - name: replace REPLACE_CHECKSUM text in version.yaml in caddy_fileserver mount_point with the head_the_sha512_sum_file_result.stdout
+      ansible.builtin.replace:
+        path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/version.yaml"
+        regexp: 'REPLACE_CHECKSUM'
+        replace: "{{ head_the_sha512_sum_file_result.stdout }}"
+        backup: no
+
+    - name: build a harvester directory within the caddy base directory
+      ansible.builtin.file:
+        path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/{{ settings.kea_server.caddy_fileserver_config.harvester_folder_name }}"
+        state: directory
+        owner: caddy
+        group: caddy
+
+    - name: build the harvester upgrade node directory name within the caddy harvester base directory
+      ansible.builtin.file:
+        path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/{{ settings.kea_server.caddy_fileserver_config.harvester_folder_name }}/{{ settings.kea_server.caddy_fileserver_config.harvester_new_node_post_upgrade_folder }}"
+        state: directory
+        owner: caddy
+        group: caddy
+
+    - name: change ownership recursively of caddy_fileserver mount_point
+      ansible.builtin.file:
+        path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}"
+        owner: caddy
+        group: caddy
+        recurse: yes
+
+    - name: start up caddy systemd service again
+      ansible.builtin.systemd:
+        name: caddy.service
+        state: started
+        daemon_reload: yes
+        enabled: yes
+
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in configuring vm further'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

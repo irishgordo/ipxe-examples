@@ -1,0 +1,9 @@
+apiVersion: harvesterhci.io/v1beta1
+kind: Version
+metadata:
+  name: {{ settings['kea_server']['caddy_fileserver_config']['version_metadata_name'] }}
+  namespace: harvester-system
+spec:
+  isoChecksum: REPLACE_CHECKSUM
+  isoURL: http://{{ settings['kea_server']['main_network']['ip'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_iso_name'] }}
+  releaseDate: '20230921'

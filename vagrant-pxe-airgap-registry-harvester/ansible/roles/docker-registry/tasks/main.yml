@@ -1,0 +1,116 @@
+- name: Setup Docker Registry
+  block:
+    - name: build the partition table for the docker registry
+      community.general.parted:
+        device: /dev/{{ settings.docker_registry.storage.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_docker_registry
+
+    - name: debug result of partition table for docker registry
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_docker_registry }}"
+
+    - name: mount the docker registry disk
+      ansible.posix.mount:
+        path: "{{ settings.docker_registry.storage.mount_point }}"
+        src: /dev/{{ settings.docker_registry.storage.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_docker_registry
+
+    - name: debug the mount result of docker registry
+      ansible.builtin.debug:
+        msg: "{{ mount_result_docker_registry }}"
+      ignore_errors: true
+
+    - name: download certgen binary
+      ansible.builtin.get_url:
+        url: "{{ settings.kea_server.minio_config.certgen_binary_url }}"
+        dest: /usr/local/bin/certgen
+        mode: +x
+
+    - name: make certs directory in /home/vagrant
+      ansible.builtin.file:
+        path: /home/vagrant/certs
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: build docker-registry certs
+      ansible.builtin.shell: >
+        cd /home/vagrant/certs && /usr/local/bin/certgen -host "{{ settings.dnsmasq.registry.ip }},{{ settings.dnsmasq.registry.domain }}"
+
+    - name: change ownership on docker registry mount point to vagrant vagrant
+      ansible.builtin.file:
+        path: "{{ settings.docker_registry.storage.mount_point }}"
+        owner: vagrant
+        group: vagrant
+        recurse: yes
+
+    - name: install ca-certficates curl gnupg2 software-properties-common
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg2
+          - software-properties-common
+        state: present
+
+    - name: add docker gpg key from download.docker.com/linux/debian/gpg
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+
+    - name: add the debian docker repository to apt /etc/apt/sources.list.d/docker.list
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+        update_cache_retries: 2
+
+    - name: add group docker
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: add vagrant user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        group: docker
+        append: yes
+
+    - name: systemctl enable docker.service and containerd.service
+      ansible.builtin.systemd:
+        name:
+          - docker.service
+          - containerd.service
+        enabled: yes
+        state: started
+
+    - name:
+
+  rescue:
+    - name: print when errs
+      ansible.builtin.debug:
+        msg: "error"
+  always:
+    - name: always do this
+      ansible.builtin.debug:
+        msg: "always"

@@ -1,0 +1,34 @@
+---
+- name: Setup NTP server
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Setting up ntp server.."
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: install ntp server
+      ansible.builtin.apt:
+        update_cache: yes
+        name: ntp
+        state: present
+    - name: move over the ntp config file
+      ansible.builtin.template:
+        src: ntp.conf.j2
+        dest: /etc/ntp.conf
+        owner: root
+        group: root
+        mode: '0644'
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in setting up ntp server'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

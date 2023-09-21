@@ -1,0 +1,6 @@
+#!ipxe
+
+kernel http://{{ settings['kea_server']['main_network']['ip'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/harvester-vmlinuz-amd64
+initrd http://{{ settings['kea_server']['main_network']['ip'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/harvester-initrd-amd64
+imgargs harvester-vmlinuz-amd64 initrd=harvester-initrd-amd64 ip=ens6:dhcp net.ifnames=1 rd.cos.disable rd.live.debug=1 rd.live.ram=1 rd.noverifyssl root=live:http://{{ settings['kea_server']['main_network']['ip'] }}/harvester/harvester-rootfs-amd64.squashfs console=tty1 harvester.install.automatic=true harvester.install.config_url=http://{{ settings['kea_server']['main_network']['ip'] }}/harvester/config-create.yaml
+boot

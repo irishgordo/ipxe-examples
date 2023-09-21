@@ -1,0 +1,16 @@
+---
+- name: create tftpboot directory inside mount point
+  ansible.builtin.file:
+    path: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}"
+    state: directory
+
+- name: create ipxe directory in tftpboot directory
+  ansible.builtin.file:
+    path: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}/ipxe"
+    state: directory
+
+- name: download ipxe configs from list and place in tftpboot ipxe folder
+  ansible.builtin.get_url:
+    url: "{{ item }}"
+    dest: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}/ipxe/{{ item | basename }}"
+  loop: "{{ settings.kea_server.tftp_config.ipxe_configs_to_download }}"

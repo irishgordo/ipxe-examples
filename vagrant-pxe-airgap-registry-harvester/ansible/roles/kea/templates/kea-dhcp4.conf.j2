@@ -1,0 +1,425 @@
+{
+
+    "Dhcp4": {
+        "valid-lifetime": 4000,
+        "renew-timer": 1000,
+        "rebind-timer": 2000,
+
+        "interfaces-config": {
+            "interfaces": [ "eth1" ]
+        },
+
+        "lease-database": {
+            "type": "memfile",
+            "persist": true,
+            "name": "/var/lib/kea/dhcp4.leases"
+        },
+
+        {# "option-def": [
+            {
+                "name": "PXEDiscoveryControl",
+                "code": 6,
+                "space": "vendor-encapsulated-options-space",
+                "type": "uint8",
+                "array": false
+            },
+            {
+                "name": "PXEMenuPrompt",
+                "code": 10,
+                "space": "vendor-encapsulated-options-space",
+                "type": "record",
+                "array": false,
+                "record-types": "uint8,string"
+            },
+            {
+                "name": "PXEBootMenu",
+                "code": 9,
+                "space": "vendor-encapsulated-options-space",
+                "type": "record",
+                "array": false,
+                "record-types": "uint16,uint8,string"
+            },
+
+            {
+                "space": "dhcp4",
+                "name": "ipxe-encap-opts",
+                "code": 175,
+                "type": "empty",
+                "encapsulate": "ipxe"
+            },
+
+            {
+                "space": "ipxe",
+                "name": "priority",
+                "code": 1,
+                "type": "int8"
+            },
+            {
+                "space": "ipxe",
+                "name": "keep-san",
+                "code": 8,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "skip-san-boot",
+                "code": 9,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "syslogs",
+                "code": 85,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "cert",
+                "code": 91,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "privkey",
+                "code": 92,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "crosscert",
+                "code": 93,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "no-pxedhcp",
+                "code": 176,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "bus-id",
+                "code": 177,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "san-filename",
+                "code": 188,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "bios-drive",
+                "code": 189,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "username",
+                "code": 190,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "password",
+                "code": 191,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "reverse-username",
+                "code": 192,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "reverse-password",
+                "code": 193,
+                "type": "string"
+            },
+            {
+                "space": "ipxe",
+                "name": "version",
+                "code": 235,
+                "type": "string"
+            },
+            {
+                "space": "dhcp4",
+                "name": "iscsi-initiator-iqn",
+                "code": 203,
+                "type": "string"
+            },
+
+            {
+                "space": "ipxe",
+                "name": "pxeext",
+                "code": 16,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "iscsi",
+                "code": 17,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "aoe",
+                "code": 18,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "http",
+                "code": 19,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "https",
+                "code": 20,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "tftp",
+                "code": 21,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "ftp",
+                "code": 22,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "dns",
+                "code": 23,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "bzimage",
+                "code": 24,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "multiboot",
+                "code": 25,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "slam",
+                "code": 26,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "srp",
+                "code": 27,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "nbi",
+                "code": 32,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "pxe",
+                "code": 33,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "elf",
+                "code": 34,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "comboot",
+                "code": 35,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "efi",
+                "code": 36,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "fcoe",
+                "code": 37,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "vlan",
+                "code": 38,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "menu",
+                "code": 39,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "sdi",
+                "code": 40,
+                "type": "uint8"
+            },
+            {
+                "space": "ipxe",
+                "name": "nfs",
+                "code": 41,
+                "type": "uint8"
+            }
+        ], #}
+
+
+
+        "option-data": [
+            {
+                "name": "ntp-servers",
+                "code": 42,
+                "data": "{{ settings['kea_server']['main_network']['ip'] }}"
+            },
+            {
+                "name": "domain-name-servers",
+                "code": 6,
+                "space": "dhcp4",
+                "csv-format": true,
+                "data": "{{ settings['kea_server']['main_network']['ip'] }}",
+                "always-send": true
+            },
+        ],
+
+
+        "client-classes": [
+            {
+                "name": "Legacy",
+                "test": "substring(option[60].hex,0,20) == 'PXEClient:Arch:00000'",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+                "option-data": [
+                    {"name": "vendor-class-identifier", "data": "iPXE", "code": 60, "always-send": true },
+                ],
+                "only-if-required": true
+            },
+            {
+                "name": "iPXE",
+                "test": "(substring(option[77].hex,0,4) == 'iPXE')",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+                "only-if-required": true
+            },
+            {# {
+                "name": "pxeclient",
+                "test": "option[vendor-class-identifier].text == 'PXEClient'",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+            },
+            {
+                "name": "pxe_bios_x86",
+                "test": "substring(option[60].hex,0,9) == 'PXEClient' and option[93].hex == 0x0000",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+            },
+            {
+                "name": "ipxe-ext",
+                "test": "option[175].option[19].exists",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+            }, #}
+            {
+                "name": "UEFI",
+                "test": "(substring(option[60].hex,0,20) == 'PXEClient:Arch:00007')",
+                "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+                "only-if-required": true
+            },
+            {# {
+                "name": "pxe",
+                "test": "option[vendor-class-identifier].text == 'PXEClient'",
+                "option-data": [
+                    {"name": "vendor-class-identifier", "data": "PXEClient" },
+                    {"name": "vendor-encapsulated-options"},
+                    {"name": "PXEBootMenu", "csv-format":true, "data": "0,17,Harvester PXE Boot","space":"vendor-encapsulated-options-space"},
+                    {"name": "PXEDiscoveryControl", "data": "3","space":"vendor-encapsulated-options-space"},
+                    {"name": "PXEMenuPrompt", "csv-format":true, "data": "0,PXE","space":"vendor-encapsulated-options-space"}
+                ]
+            } #}
+        ],
+
+        "subnet4": [
+            {
+                "id": 1,
+
+                "subnet": "{{ settings['kea_server']['main_network']['cidr_block'] }}",
+
+                "reservations": [
+
+                    {
+                        "hw-address": "{{ settings['harvester_network_config']['vip']['mac'] }}",
+                        "ip-address": "{{ settings['harvester_network_config']['vip']['ip'] }}"
+                    },
+
+                    {% for item in settings['harvester_network_config']['cluster'] %}
+                    {
+                        "hw-address": "{{ item['mac'] }}",
+                        "ip-address": "{{ item['ip'] }}",
+                        "boot-file-name": "ipxe/{{ item['mac']|lower }}",
+                        "next-server": "{{ settings['kea_server']['main_network']['ip'] }}",
+                        "option-data": [
+				            {"name": "vendor-class-identifier", "data": "PXEClient", "code": 60 },
+                            {"name": "boot-file-name", "data": "ipxe/{{ item['mac']|lower }}"}
+			            ]
+                    },
+                    {% endfor %}
+
+                ],
+
+                "relay": {
+                    "ip-address": "{{ settings['kea_server']['main_network']['ip'] }}"
+                },
+
+                "pools": [
+                    {
+                        "pool": "{{ settings['kea_server']['main_network']['range_start'] }} - {{ settings['kea_server']['main_network']['range_end'] }}",
+                        "require-client-classes": ["Legacy","iPXE","UEFI"],
+                        {# "require-client-classes": ["iPXE","pxeclient","pxe_bios_x86","ipxe-ext","UEFI"], #}
+                    }
+                ],
+
+                "interface": "eth1",
+
+                "option-data": [
+                    {
+                        "code": 3,
+                        "name": "routers",
+                        "data": "{{ settings['kea_server']['main_network']['ip'] }}",
+                        "always-send": true
+                    }
+                ]
+            }
+        ],
+
+        "loggers": [
+            {
+                "name": "kea-dhcp4",
+                "output_options": [
+                {
+                    "output": "/var/log/kea/kea-dhcp4.log"
+                }
+                ],
+                "severity": "DEBUG",
+                "debuglevel": 99
+            }
+        ]
+
+    }
+
+}

@@ -1,0 +1,11 @@
+MINIO_VOLUMES="{{ settings['kea_server']['storage']['minio']['mount_point'] }}/{{ settings['kea_server']['storage']['minio']['folder_name'] }}"
+
+MINIO_OPTS="--certs-dir /home/minio-user/.minio/certs --console-address :{{ settings['kea_server']['minio_config']['web_console_port'] }}"
+
+MINIO_ROOT_USER={{ settings['kea_server']['minio_config']['user'] }}
+
+MINIO_ROOT_PASSWORD={{ settings['kea_server']['minio_config']['password'] }}
+
+MINIO_SITE_REGION="{{ settings['kea_server']['minio_config']['region'] }}"
+
+MINIO_SERVER_URL="https://{{ settings['kea_server']['main_network']['ip'] }}:{{ settings['kea_server']['minio_config']['api_port'] }}"

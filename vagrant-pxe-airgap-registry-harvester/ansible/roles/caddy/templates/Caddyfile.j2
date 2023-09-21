@@ -1,0 +1,14 @@
+{% if  (settings['kea_server']['caddy_fileserver_config']['debug']) %}
+{
+    debug
+}
+{% else %}
+{% endif %}
+
+:80 {
+
+    root * {{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}
+    encode gzip
+
+    file_server browse
+}

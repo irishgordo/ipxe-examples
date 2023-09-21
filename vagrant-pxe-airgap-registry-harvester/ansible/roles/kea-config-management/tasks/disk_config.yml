@@ -1,0 +1,177 @@
+- name: Configure VM Disks And Base Packages
+  block:
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Installing packages and configuring disks..."
+      register: mention_what_we_are_doing_here_result
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: mention_what_we_are_doing_here_result
+        verbosity: 2
+      ignore_errors: true
+
+    - name: disk configuration provisioning
+      ansible.builtin.apt:
+        update_cache: no
+        pkg:
+          - parted
+          - fdisk
+          - gnupg2
+          - neovim
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - wget
+          - net-tools
+          - htop
+          - software-properties-common
+          - qemu-guest-agent
+        state: present
+      register: snagged_packages_result
+
+    - name: debug the packages
+      ansible.builtin.debug:
+        msg: "{{ snagged_packages_result }}"
+      ignore_errors: true
+
+    - name: mention what we are doing here
+      ansible.builtin.shell: >
+        echo "Configuring disks..."
+      register: configuring_disks_msg
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: configuring_disks_msg
+        verbosity: 2
+
+    - name: build partition table for minio
+      community.general.parted:
+        device: /dev/{{ settings.kea_server.storage.minio.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_minio
+
+    - name: debug the partition table for minio
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_minio }}"
+
+    - name: create filesystem for minio
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/{{ settings.kea_server.storage.minio.device }}1
+      register: filesystem_result_minio
+
+    - name: debug the create filesystem for minio
+      ansible.builtin.debug:
+        msg: "{{ filesystem_result_minio }}"
+      ignore_errors: true
+
+    - name: mount minio data point
+      ansible.posix.mount:
+        path: "{{ settings.kea_server.storage.minio.mount_point }}"
+        src: /dev/{{ settings.kea_server.storage.minio.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_minio
+
+    - name: debug the mount minio data point
+      ansible.builtin.debug:
+        msg: "{{ mount_result_minio }}"
+      ignore_errors: true
+
+    - name: build partition table for caddy fileserver
+      community.general.parted:
+        device: /dev/{{ settings.kea_server.storage.caddy_fileserver.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_caddy_fileserver
+
+    - name: debug filesystem for caddy fileserver
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_caddy_fileserver }}"
+      ignore_errors: true
+
+    - name: create filesystem for caddy fileserver
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/{{ settings.kea_server.storage.caddy_fileserver.device }}1
+      register: filesystem_result_caddy_fileserver
+
+    - name: debug filesystem creation for caddy fileserver
+      ansible.builtin.debug:
+        msg: "{{ filesystem_result_caddy_fileserver }}"
+      ignore_errors: true
+
+    - name: mount caddy fileserver data point
+      ansible.posix.mount:
+        path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}"
+        src: /dev/{{ settings.kea_server.storage.caddy_fileserver.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_caddy_fileserver
+
+    - name: debug caddy fileserver mount point
+      ansible.builtin.debug:
+        msg: "{{ mount_result_caddy_fileserver }}"
+      ignore_errors: true
+
+    - name: build partition table for tftp
+      community.general.parted:
+        device: /dev/{{ settings.kea_server.storage.tftp.device }}
+        number: 1
+        state: present
+        label: gpt
+        part_type: primary
+        part_start: 0%
+        part_end: 100%
+      register: partition_table_result_tftp
+
+    - name: debug tftp partition table
+      ansible.builtin.debug:
+        msg: "{{ partition_table_result_tftp }}"
+      ignore_errors: true
+
+    - name: create filesystem for tftp
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/{{ settings.kea_server.storage.tftp.device }}1
+      register: filesystem_result_tftp
+
+    - name: debug tftp filesystem
+      ansible.builtin.debug:
+        msg: "{{ filesystem_result_tftp }}"
+      ignore_errors: true
+
+    - name: mount tftp data point
+      ansible.posix.mount:
+        path: "{{ settings.kea_server.storage.tftp.mount_point }}"
+        src: /dev/{{ settings.kea_server.storage.tftp.device }}1
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      register: mount_result_tftp
+
+    - name: debug tftp mount point
+      ansible.builtin.debug:
+        msg: "{{ mount_result_tftp }}"
+      ignore_errors: true
+
+  rescue:
+    - name: Print when errors
+      ansible.builtin.debug:
+        msg: 'I caught an error in configuring disks'
+  always:
+    - name: Always do this
+      ansible.builtin.debug:
+        msg: "This always executes"

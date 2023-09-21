@@ -1,0 +1,76 @@
+- name: setup debian repo for kea with cloudsmith.io instructions, add base packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - debian-keyring
+    - debian-archive-keyring
+    - apt-transport-https
+
+- name: copy the isc-kea-2-4_deb.sh script to /home/vagrant
+  ansible.builtin.copy:
+    src: isc-kea-2-4_deb.sh
+    dest: /home/vagrant/isc-kea-2-4_deb.sh
+    owner: vagrant
+    group: vagrant
+    mode: '0755'
+
+- name: run the script
+  ansible.builtin.command:
+    cmd: /home/vagrant/isc-kea-2-4_deb.sh
+  register: console
+
+- name: print the output of console
+  ansible.builtin.debug:
+    msg: "{{ console.stdout_lines }}"
+
+- name: apt update
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: install isc-kea
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - isc-kea
+    - isc-kea-admin
+    - isc-kea-common
+    - isc-kea-dhcp4
+    - isc-kea-dhcp4-server
+    - isc-kea-hooks
+    - isc-kea-ctrl-agent
+    # - isc-kea-dhcp-ddns
+    # - isc-kea-dhcp-ddns-server
+
+# - name: move template kea-dhcp-ddns.conf to etc/kea
+#   ansible.builtin.template:
+#     src: kea-dhcp-ddns.conf.j2
+#     dest: /etc/kea/kea-dhcp-ddns.conf
+#     owner: root
+#     group: root
+#     mode: '0644'
+
+- name: move template kea-dhcp4.conf to etc/kea
+  ansible.builtin.template:
+    src: kea-dhcp4.conf.j2
+    dest: /etc/kea/kea-dhcp4.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+# - name: systemd enable and start the isc-kea-dhcp-ddns-server
+#   ansible.builtin.systemd:
+#     name: isc-kea-dhcp-ddns-server.service
+#     enabled: yes
+#     state: started
+#     daemon_reload: yes
+
+- name: systemd enabke isc-kea-dhcp4-server
+  ansible.builtin.systemd:
+    name: isc-kea-dhcp4-server.service
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  notify: restart isc-kea-dhcp4-server

@@ -1,0 +1,24 @@
+- name: disable eth0, default network
+  ansible.builtin.shell: |
+    ip link set eth0 down
+  register: ifconfig_eth0_disabling_result
+
+- name: debug ifconfig_eth0_disabling_result
+  ansible.builtin.debug:
+    msg: "{{ ifconfig_eth0_disabling_result.stdout }}"
+  ignore_errors: yes
+
+- name: ip route enable back for harvester
+  ansible.builtin.shell: |
+    ip route replace default via {{ settings.kea_server.main_network.ip }} dev eth1
+  register: route_change_result
+
+- name: debug route_change_result
+  ansible.builtin.debug:
+    msg: "{{ route_change_result.stdout }}"
+  ignore_errors: yes
+
+- name: disable rancher.com access
+  ansible.builtin.shell: |
+    echo "ALL : .rancher.com" >> /etc/hosts.deny
+  register: disable_rancher_access

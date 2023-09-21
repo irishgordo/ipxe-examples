@@ -1,0 +1,88 @@
+---
+- name: print the global variable additional_ca_to_snag
+  ansible.builtin.debug:
+    msg: "{{ additional_ca_to_snag.stdout }}"
+
+- name: copy config-create.yaml
+  ansible.builtin.template:
+    src: "config-create.yaml.j2"
+    dest: "{{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/config-create.yaml"
+    owner: caddy
+    mode: 0640
+
+# NOTE(gyee): Ansible pre-process the with_sequence variable so we have to
+# # make sure end sequence is at least 1 even if we have only one Harvester node
+- name: set node sequence fact
+  set_fact:
+    end_sequence: "{{ settings['harvester_cluster_nodes'] - 1 if settings['harvester_cluster_nodes'] > 1 else 1 }}"
+
+- name: copy config-join.yaml
+  ansible.builtin.template:
+    src: "config-join.yaml.j2"
+    dest: "{{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/config-join-{{ item }}.yaml"
+    owner: caddy
+    mode: 0640
+  vars:
+    node_number: "{{ item }}"
+  with_sequence: "start=1 end={{ end_sequence }}"
+
+- name: chown dir
+  ansible.builtin.file:
+    path: "{{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}"
+    owner: caddy
+    recurse: yes
+
+- name: create boot entry for the first node
+  ansible.builtin.template:
+    src: ipxe-create.j2
+    #dest: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}/ipxe/{{ settings['harvester_network_config']['cluster'][0]['mac']|lower }}"
+    dest: "{{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/{{ settings['harvester_network_config']['cluster'][0]['mac']|lower }}"
+  vars:
+    boot_interface: "{{ settings['harvester_network_config']['cluster'][0]['vagrant_interface'] }}"
+
+- name: create boot entry for the cluster members
+  ansible.builtin.template:
+    src: ipxe-join.j2
+    #dest: "{{ settings.kea_server.storage.tftp.mount_point }}/{{ settings.kea_server.storage.tftp.folder_name }}/ipxe/{{ settings['harvester_network_config']['cluster'][item|int]['mac']|lower }}"
+    dest: "{{ settings['kea_server']['storage']['caddy_fileserver']['mount_point'] }}/{{ settings['kea_server']['caddy_fileserver_config']['harvester_folder_name'] }}/{{ settings['harvester_network_config']['cluster'][item|int]['mac']|lower }}"
+  vars:
+    node_number: "{{ item }}"
+    boot_interface: "{{ settings['harvester_network_config']['cluster'][item|int]['vagrant_interface'] }}"
+  with_sequence: "start=1 end={{ end_sequence }}"
+
+- name: download Harvester kernel
+  include: _download_media.yml
+  vars:
+    harvester_media_url: "{{ settings['kea_server']['caddy_fileserver_config']['harvester_kernel_url'] }}"
+    media_filename: "harvester-vmlinuz-amd64"
+
+- name: download Harvester ramdisk
+  include: _download_media.yml
+  vars:
+    harvester_media_url: "{{ settings['kea_server']['caddy_fileserver_config']['harvester_ramdisk_url'] }}"
+    media_filename: "harvester-initrd-amd64"
+
+- name: download Harvester ISO
+  include: _download_media.yml
+  vars:
+    harvester_media_url: "{{ settings['kea_server']['caddy_fileserver_config']['harvester_iso_url'] }}"
+    media_filename: "harvester-amd64.iso"
+
+- name: download Harvester Root FS
+  include: _download_media.yml
+  vars:
+    harvester_media_url: "{{ settings['kea_server']['caddy_fileserver_config']['harvester_rootfs_url'] }}"
+    media_filename: "harvester-rootfs-amd64.squashfs"
+
+- name: download from the artifact list for the harvester_new_node_post_upgrade_folder
+  ansible.builtin.get_url:
+    url: "{{ item }}"
+    dest: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}/{{ settings.kea_server.caddy_fileserver_config.harvester_folder_name }}/{{ settings.kea_server.caddy_fileserver_config.harvester_new_node_post_upgrade_folder }}/{{ item | basename }}"
+  loop: "{{ settings.kea_server.caddy_fileserver_config.harvester_new_node_post_upgrade_artifact_list }}"
+
+- name: make sure to recursively change ownership on /mnt/caddy-fileserver-data to caddy caddy
+  ansible.builtin.file:
+    path: "{{ settings.kea_server.storage.caddy_fileserver.mount_point }}"
+    owner: caddy
+    group: caddy
+    recurse: yes
