@@ -1,0 +1,124 @@
+- name: Setup Docker Registry
+  block:
+    - name: download certgen binary
+      ansible.builtin.get_url:
+        url: "{{ settings.docker_registry.certgen_binary_url }}"
+        dest: /usr/local/bin/certgen
+        mode: +x
+
+    - name: make certs directory in /home/vagrant
+      ansible.builtin.file:
+        path: /home/vagrant/certs
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: build docker-registry certs
+      ansible.builtin.shell: >
+        cd /home/vagrant/certs && /usr/local/bin/certgen -host "{{ settings.docker_registry.ip }},{{ settings.docker_registry.domain }}"
+
+    - name: change ownership on docker registry mount point to vagrant vagrant
+      ansible.builtin.file:
+        path: "{{ settings.docker_registry.storage.docker_registry.mount_point }}"
+        owner: vagrant
+        group: vagrant
+        recurse: yes
+
+    - name: install ca-certficates curl gnupg2 software-properties-common
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg2
+          - software-properties-common
+        state: present
+
+    - name: add docker gpg key from download.docker.com/linux/debian/gpg
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+
+    - name: add the debian docker repository to apt /etc/apt/sources.list.d/docker.list
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+        update_cache_retries: 2
+
+    - name: add group docker
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: add vagrant user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        group: docker
+        append: yes
+
+    - name: template over the daemon.json to the docker location
+      ansible.builtin.template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: '0644'
+      register: docker_daemon_json_result
+
+    - name: template over docker-compose.yml to /home/vagrant/docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: /home/vagrant/docker-compose.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+      register: docker_compose_result
+
+    - name: template over config.yml to /home/vagrant/config.yml
+      ansible.builtin.template:
+        src: config.yml.j2
+        dest: /home/vagrant/config.yml
+        owner: vagrant
+        group: vagrant
+        mode: '0644'
+      register: config_yml_result
+
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: restart docker
+      ansible.builtin.systemd:
+        name: docker.service
+        state: restarted
+
+    - name: docker-compose up -d
+      ansible.builtin.shell: docker compose up -d
+      args:
+        chdir: /home/vagrant
+      register: docker_compose_up_result
+
+    - name: debug the docker-compose up -d result
+      ansible.builtin.debug:
+        msg: "{{ docker_compose_up_result }}"
+      ignore_errors: true
+
+  rescue:
+    - name: print when errs
+      ansible.builtin.debug:
+        msg: "error"
+  always:
+    - name: always do this
+      ansible.builtin.debug:
+        msg: "always"

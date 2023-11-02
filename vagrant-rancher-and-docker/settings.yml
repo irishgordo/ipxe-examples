@@ -1,0 +1,53 @@
+docker_registry:
+  cpus: '6'
+  memory: '16584'
+  certgen_binary_url: https://github.com/minio/certgen/releases/download/v1.2.1/certgen-linux-amd64
+  ip: "192.168.9.133"
+  mac: 02:00:00:DF:27:80
+  domain: airgap-docker-registry.localdomain
+  rancher_upgrade_images_text: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-images.txt
+  rancher_upgrade_images_save_sh: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-save-images.sh
+  rancher_upgrade_images_load_sh: https://github.com/rancher/rancher/releases/download/v2.7.9/rancher-load-images.sh
+  rancher_initial_images_text: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-images.txt
+  rancher_initial_images_save_sh: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-save-images.sh
+  rancher_initial_images_load_sh: https://github.com/rancher/rancher/releases/download/v2.7.6/rancher-load-images.sh
+  k3s_initial_images_text_url: https://github.com/k3s-io/k3s/releases/download/v1.25.13%2Bk3s1/k3s-images.txt
+  k3s_upgrade_images_text_url: https://github.com/k3s-io/k3s/releases/download/v1.26.8%2Bk3s1/k3s-images.txt
+  cert_manager_images:
+    - quay.io/jetstack/cert-manager-cainjector:v0.12.0
+    - quay.io/jetstack/cert-manager-controller:v0.12.0
+    - quay.io/jetstack/cert-manager-webhook:v0.12.0
+  storage:
+    host_docker:
+      size: '300G'
+      device: 'vdb'
+      mount_point: /mnt/docker/storage
+    docker_registry:
+      size: '300G'
+      device: 'vdc'
+      mount_point: /var/lib/registry
+
+rancher_node:
+  ip: "192.168.9.134"
+  mac: 02:00:00:1C:8B:E8
+  domain: airgap-rancher-node.localdomain
+  cpus: '4'
+  memory: '8192'
+  k3s_binary_url: https://github.com/k3s-io/k3s/releases/download/v1.25.13%2Bk3s1/k3s
+  k3s_initial_version: v1.25.13+k3s1
+  k3s_script_url: https://get.k3s.io/
+  cert_manager_version_to_install: v1.0.0
+  helm_binary_url: https://get.helm.sh/helm-v3.13.2-linux-amd64.tar.gz
+  cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v1.0.0/cert-manager.crds.yaml
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.crds.yaml
+  rancher_initial_version_desired: v2.7.6
+  rancher_version_no_v: 2.7.6
+  rancher_helm_repo_to_use: rancher-stable/rancher
+  rancher_replica_count: 3
+  rancher_bootstrap_password: testtesttest
+  rancher_psp_enabled: false
+  #cert_manager_manifest_url: https://github.com/cert-manager/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+
+main_dns: 192.168.1.1
+alternate_dns: 1.1.1.1

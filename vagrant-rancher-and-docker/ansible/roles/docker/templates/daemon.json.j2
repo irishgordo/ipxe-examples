@@ -1,0 +1,6 @@
+{
+    "allow-nondistributable-artifacts": ["{{ settings['docker_registry']['ip'] }}"],
+    "data-root": "{{ settings['docker_registry']['storage']['host_docker']['mount_point'] }}",
+    "ip": "{{ settings['docker_registry']['ip'] }}",
+    "insecure-registries": ["{{ settings['docker_registry']['ip'] }}:5000"]
+}

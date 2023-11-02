@@ -1,0 +1,49 @@
+- name: add helm repos for rancher in the /home/vagrant directory
+  ansible.builtin.shell: |
+    KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+    KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+    KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm repo add rancher-alpha https://releases.rancher.com/server-charts/alpha
+    KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm repo update
+  register: add_helm_repos_for_rancher_result
+
+- name: debug add helm repo result
+  ansible.builtin.debug:
+    msg: "{{ add_helm_repos_for_rancher_result }}"
+  ignore_errors: true
+
+- name: build the cattle-system --namespace
+  ansible.builtin.shell: |
+    KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl create namespace cattle-system
+  register: build_the_cattle_system_namespace_result
+
+- name: download the repo fetch
+  ansible.builtin.shell: |
+    cd /home/vagrant && KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm fetch {{ settings.rancher_node.rancher_helm_repo_to_use }} --version={{ settings.rancher_node.rancher_initial_version_desired }}
+  register: result_of_fetch
+
+- name: debug result of fetch
+  ansible.builtin.debug:
+    msg: "{{ result_of_fetch }}"
+  ignore_errors: true
+
+- name: debug build the cattle-system --namespace result
+  ansible.builtin.debug:
+    msg: "{{ build_the_cattle_system_namespace_result }}"
+  ignore_errors: true
+
+- name: template over rancher-values.yaml.j2 template to /home/vagrant
+  ansible.builtin.template:
+    src: rancher-values.yaml.j2
+    dest: /home/vagrant/rancher-values.yaml
+    mode: 0644
+  register: template_over_rancher_values_yaml_result
+
+- name: install rancher
+  ansible.builtin.shell: |
+    helm install rancher /home/vagrant/rancher-{{ settings.rancher_node.rancher_version_no_v }}.tgz --namespace cattle-system --version {{ settings.rancher_node.rancher_initial_version_desired }} --values /home/vagrant/rancher-values.yaml --kubeconfig /etc/rancher/k3s/k3s.yaml
+  register: install_rancher_result
+
+- name: debug install rancher result
+  ansible.builtin.debug:
+    msg: "{{ install_rancher_result }}"
+  ignore_errors: true

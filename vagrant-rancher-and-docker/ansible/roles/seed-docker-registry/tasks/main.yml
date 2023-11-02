@@ -1,0 +1,414 @@
+- name: create /home/vagrant/cert-manager-images.txt file
+  ansible.builtin.file:
+    path: /home/vagrant/cert-manager-images.txt
+    state: touch
+    owner: vagrant
+    group: vagrant
+    mode: '0644'
+  register: create_cert_manager_images_txt_file_result
+
+- name: write file to /home/vagrant/cert-manager-images.txt looping over settings.docker_registry.cert_manager_images
+  ansible.builtin.lineinfile:
+    path: /home/vagrant/cert-manager-images.txt
+    line: "{{ item }}"
+  loop: "{{ settings.docker_registry.cert_manager_images }}"
+  register: write_file_to_cert_manager_images_txt_result
+
+- name: debug write_file_to_cert_manager_images_txt_result
+  ansible.builtin.debug:
+    msg: "{{ write_file_to_cert_manager_images_txt_result }}"
+  ignore_errors: true
+
+- name: register the cat value of cert-manager-images.txt
+  ansible.builtin.shell: cat /home/vagrant/cert-manager-images.txt
+  register: cert_manager_images_cat_result
+
+- name: pull the cert-manager images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  loop: "{{ cert_manager_images_cat_result.stdout_lines }}"
+  register: cert_manager_image_pull_result
+
+- name: debug the cert_manager_image_pull_result
+  ansible.builtin.debug:
+    msg: "{{ cert_manager_image_pull_result }}"
+  ignore_errors: true
+
+- name: copy cert-manager-images.txt to /home/vagrant/cert-manager-images-modified.txt
+  ansible.builtin.copy:
+    src: /home/vagrant/cert-manager-images.txt
+    dest: /home/vagrant/cert-manager-images-modified.txt
+    remote_src: true
+  register: copy_cert_manager_images_txt_to_cert_manager_images_modified_txt_result
+
+- name: debug the copy_cert_manager_images_txt_to_cert_manager_images_modified_txt_result
+  ansible.builtin.debug:
+    msg: "{{ copy_cert_manager_images_txt_to_cert_manager_images_modified_txt_result }}"
+  ignore_errors: true
+
+- name: modify the cert-manager-images-modified.txt for phase one tag text
+  ansible.builtin.replace:
+    path: /home/vagrant/cert-manager-images-modified.txt
+    regexp: 'quay.io/'
+    replace: ''
+  register: modify_cert_manager_images_modified_txt_for_phase_one_tag_text_result
+
+- name: Log into private registry and force re-authorization
+  community.docker.docker_login:
+    registry_url: "{{ settings.docker_registry.ip }}:5000"
+    username: admin
+    password: admin
+    reauthorize: true
+  register: docker_login_result
+
+- name: register the cat of cert-manager-images.txt
+  ansible.builtin.shell: cat /home/vagrant/cert-manager-images.txt
+  register: cert_manager_images_cat_result_original
+
+- name: docker tag with lines of cert-manager-images-modified.txt
+  ansible.builtin.shell: |
+    docker tag {{ item }} {{ settings.docker_registry.ip }}:5000/$(echo {{ item }})
+  loop: "{{ cert_manager_images_cat_result_original.stdout_lines }}"
+  register: docker_tag_with_lines_of_cert_manager_images_modified_result
+
+- name: debug docker_tag_with_lines_of_cert_manager_images_modified_result
+  ansible.builtin.debug:
+    msg: "{{ docker_tag_with_lines_of_cert_manager_images_modified_result }}"
+  ignore_errors: true
+
+- name: register the cat of cert-manager-images.txt again
+  ansible.builtin.shell: cat /home/vagrant/cert-manager-images.txt
+  register: cert_manager_images_modified_cat_result_again
+
+- name: docker push with cert-manager-images-modified.txt
+  ansible.builtin.shell: |
+    docker push {{ settings.docker_registry.ip }}:5000/$(echo {{ item }} | sed "s/\:.*//") --all-tags
+  loop: "{{ cert_manager_images_modified_cat_result_again.stdout_lines }}"
+  register: docker_push_with_cert_manager_images_modified_result
+
+- name: download the initial k3s images text file into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.k3s_initial_images_text_url }}"
+    dest: /home/vagrant/k3s-images-initial.txt
+  register: k3s_initial_images_text_result
+
+- name: debug the initial k3s images text file result
+  ansible.builtin.debug:
+    msg: "{{ k3s_initial_images_text_result }}"
+  ignore_errors: true
+
+- name: download the upgrade k3s images text file into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.k3s_upgrade_images_text_url }}"
+    dest: /home/vagrant/k3s-images-upgrade.txt
+  register: k3s_upgrade_images_text_result
+
+- name: debug the upgrade k3s images text file result
+  ansible.builtin.debug:
+    msg: "{{ k3s_upgrade_images_text_result }}"
+  ignore_errors: true
+
+- name: register the cat value of k3s-image-initial.txt
+  ansible.builtin.shell: cat /home/vagrant/k3s-images-initial.txt
+  register: k3s_image_initial_cat_result
+
+- name: pull the initial k3s images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  loop: "{{ k3s_image_initial_cat_result.stdout_lines }}"
+  register: k3s_image_pull_result
+
+- name: debug the k3s_image_pull_result
+  ansible.builtin.debug:
+    msg: "{{ k3s_image_pull_result }}"
+  ignore_errors: true
+
+- name: register the k3s-images-upgrade.txt
+  ansible.builtin.shell: cat /home/vagrant/k3s-images-upgrade.txt
+  register: k3s_image_upgrade_cat_result
+
+- name: pull the upgrade k3s images
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  loop: "{{ k3s_image_upgrade_cat_result.stdout_lines }}"
+  register: k3s_image_pull_result
+
+- name: debug the k3s_image_pull_result
+  ansible.builtin.debug:
+    msg: "{{ k3s_image_pull_result }}"
+  ignore_errors: true
+
+# Note, image-lists will look like this:
+# docker.io/rancher/klipper-helm:v0.8.2-build20230815
+# docker.io/rancher/klipper-lb:v0.4.4
+# docker.io/rancher/local-path-provisioner:v0.0.24
+# docker.io/rancher/mirrored-coredns-coredns:1.10.1
+# docker.io/rancher/mirrored-library-busybox:1.34.1
+# docker.io/rancher/mirrored-library-traefik:2.9.10
+# docker.io/rancher/mirrored-metrics-server:v0.6.3
+# docker.io/rancher/mirrored-pause:3.6
+# We need to after it is pulled into the local docker retag and push to the private registry
+# like: docker tag rancher/coredns-coredns:1.6.3 mycustomreg.com:5000/coredns-coredns
+# then: docker push mycustomreg.com:5000/coredns-coredns
+# So we'll for both the k3s upgrade & k3s initial images lists do some regex magic
+
+- name: copy initial k3s text to k3s text modified phase1
+  ansible.builtin.copy:
+    src: /home/vagrant/k3s-images-initial.txt
+    dest: /home/vagrant/k3s-images-initial-modified.txt
+    remote_src: true
+  register: copy_initial_k3s_text_to_k3s_text_modified_result
+
+- name: modify k3s image initial for phase one tag text
+  ansible.builtin.replace:
+    path: /home/vagrant/k3s-images-initial-modified.txt
+    regexp: 'docker.io/'
+    replace: ''
+  register: modify_k3s_image_initial_for_tag_text_result
+
+- name: Log into private registry and force re-authorization
+  community.docker.docker_login:
+    registry_url: "{{ settings.docker_registry.ip }}:5000"
+    username: admin
+    password: admin
+    reauthorize: true
+  register: docker_login_result
+
+- name: debug docker login result
+  ansible.builtin.debug:
+    msg: "{{ docker_login_result }}"
+  ignore_errors: true
+
+- name: register the cat result of the k3s-image-initial-modified.txt
+  ansible.builtin.shell: cat /home/vagrant/k3s-images-initial-modified.txt
+  register: k3s_image_initial_modified_cat_result
+
+- name: docker tag and docker push with lines of the k3s-image-initial-modified.txt
+  ansible.builtin.shell: |
+    docker tag {{ item }} {{ settings.docker_registry.ip }}:5000/$(echo {{ item }})
+  loop: "{{ k3s_image_initial_modified_cat_result.stdout_lines }}"
+  register: docker_tag_and_push_with_lines_of_k3s_image_initial_modified_result
+
+- name: debug docker_tag_and_push_with_lines_of_k3s_image_initial_modified_result
+  ansible.builtin.debug:
+    msg: "{{ docker_tag_and_push_with_lines_of_k3s_image_initial_modified_result }}"
+  ignore_errors: true
+
+- name: register the cat result of the k3s-image-initial-modified.txt again
+  ansible.builtin.shell: cat /home/vagrant/k3s-images-initial-modified.txt
+  register: k3s_image_initial_modified_cat_result_again
+
+- name: docker push k3s-image-initial-modified.txt
+  ansible.builtin.shell: |
+    docker push {{ settings.docker_registry.ip }}:5000/$(echo {{ item }} | sed "s/\:.*//") --all-tags
+  loop: "{{ k3s_image_initial_modified_cat_result_again.stdout_lines }}"
+  register: docker_push_k3s_image_initial_modified_result
+
+- name: debug docker_push_k3s_image_initial_modified_result
+  ansible.builtin.debug:
+    msg: "{{ docker_push_k3s_image_initial_modified_result }}"
+  ignore_errors: true
+
+- name: copy upgrade k3s text to modified text
+  ansible.builtin.copy:
+    src: /home/vagrant/k3s-images-upgrade.txt
+    dest: /home/vagrant/k3s-images-upgrade-modified.txt
+    remote_src: true
+  register: copy_upgrade_k3s_text_to_modified_text_result
+
+- name: modify the k3s upgrade image text for phase one tag text
+  ansible.builtin.replace:
+    path: /home/vagrant/k3s-images-upgrade-modified.txt
+    regexp: 'docker.io/'
+    replace: ''
+  register: modify_k3s_upgrade_image_text_for_phase_one_tag_text_result
+
+- name: register the cat result of the k3s-image-upgrade-modified.txt
+  ansible.builtin.shell: cat /home/vagrant/k3s-images-upgrade-modified.txt
+  register: k3s_image_upgrade_modified_cat_result
+# #docker push 192.168.9.133:5000/rancher/mirrored-pause:3
+
+- name: docker tag with lines of the k3s-image-upgrade-modified.txt
+  ansible.builtin.shell: |
+    docker tag {{ item }} {{ settings.docker_registry.ip }}:5000/$(echo {{ item }})
+  loop: "{{ k3s_image_upgrade_modified_cat_result.stdout_lines }}"
+  register: docker_tag_with_lines_of_k3s_image_upgrade_modified_result
+
+- name: debug docker_tag_with_lines_of_k3s_image_upgrade_modified_result
+  ansible.builtin.debug:
+    msg: "{{ docker_tag_with_lines_of_k3s_image_upgrade_modified_result }}"
+  ignore_errors: true
+
+- name: docker push with k3s-image-upgrade-modified.txt
+  ansible.builtin.shell: |
+    docker push {{ settings.docker_registry.ip }}:5000/$(echo {{ item }} | sed "s/\:.*//") --all-tags
+  loop: "{{ k3s_image_upgrade_modified_cat_result.stdout_lines }}"
+  register: docker_push_with_k3s_image_upgrade_modified_result
+
+- name: debug docker push k3s-image-upgrade-modified.txt
+  ansible.builtin.debug:
+    msg: "{{ docker_push_with_k3s_image_upgrade_modified_result }}"
+  ignore_errors: true
+
+- name: download the initial rancher images text file into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_initial_images_text }}"
+    dest: /home/vagrant/rancher-images.txt
+  register: rancher_initial_images_text_result
+
+- name: debug rancher_images_modification_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_images_modification_result }}"
+  ignore_errors: true
+
+- name: debug rancher_initial_images_text_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_initial_images_text_result }}"
+  ignore_errors: true
+
+- name: download initial rancher save images script into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_initial_images_save_sh }}"
+    dest: /home/vagrant/rancher-save-images.sh
+  register: rancher_initial_images_save_sh_result
+
+- name: debug rancher_initial_images_save_sh_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_initial_images_save_sh_result }}"
+  ignore_errors: true
+
+- name: make rancher-save-images.sh executable
+  ansible.builtin.file:
+    path: /home/vagrant/rancher-save-images.sh
+    mode: '0755'
+  register: rancher_save_images_sh_executable_result
+
+- name: debug rancher_save_images_sh_executable_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_save_images_sh_executable_result }}"
+  ignore_errors: true
+
+- name: sort rancher-images.txt
+  ansible.builtin.command: sort -u /home/vagrant/rancher-images.txt -o /home/vagrant/rancher-images.txt
+  register: sort_result_of_rancher_images_txt
+
+- name: debug sort_result_of_rancher_images_txt
+  ansible.builtin.debug:
+    msg: "{{ sort_result_of_rancher_images_txt }}"
+  ignore_errors: true
+
+- name: download initial rancher images load sh
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_initial_images_load_sh }}"
+    dest: /home/vagrant/rancher-load-images.sh
+  register: rancher_initial_images_load_sh_result
+
+- name: debug initial rancher images load sh
+  ansible.builtin.debug:
+    msg: "{{ rancher_initial_images_load_sh_result }}"
+  ignore_errors: true
+
+- name: make load images initial shell executable
+  ansible.builtin.file:
+    path: /home/vagrant/rancher-load-images.sh
+    mode: '0755'
+  register: rancher_load_images_sh_executable_result
+
+- name: acquire rancher images
+  ansible.builtin.command: /home/vagrant/rancher-save-images.sh --image-list /home/vagrant/rancher-images.txt
+  register: rancher_image_acquired_result
+
+- name: debug rancher_image_acquired_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_image_acquired_result }}"
+  ignore_errors: true
+
+- name: load in rancher images to private registry
+  ansible.builtin.command: /home/vagrant/rancher-load-images.sh --image-list /home/vagrant/rancher-images.txt --registry {{ settings.docker_registry.ip }}:5000
+  register: load_to_private_registry_result
+
+- name: debug load_to_private_registry_result
+  ansible.builtin.debug:
+    msg: "{{ load_to_private_registry_result }}"
+  ignore_errors: true
+
+- name: download the upgrade rancher images text file into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_upgrade_images_text }}"
+    dest: /home/vagrant/rancher-images-upgrade.txt
+  register: rancher_upgrade_images_text_result
+
+- name: debug rancher_upgrade_images_text_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_upgrade_images_text_result }}"
+  ignore_errors: true
+
+- name: download upgrade rancher save images script into /home/vagrant
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_upgrade_images_save_sh }}"
+    dest: /home/vagrant/rancher-save-images-upgrade.sh
+  register: rancher_upgrade_images_save_sh_result
+
+- name: debug rancher_upgrade_images_save_sh_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_upgrade_images_save_sh_result }}"
+  ignore_errors: true
+
+- name: make rancher-save-images-upgrade.sh executable
+  ansible.builtin.file:
+    path: /home/vagrant/rancher-save-images-upgrade.sh
+    mode: '0755'
+  register: rancher_save_images_upgrade_sh_executable_result
+
+- name: debug rancher_save_images_upgrade_sh_executable_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_save_images_upgrade_sh_executable_result }}"
+  ignore_errors: true
+
+- name: sort rancher-images-upgrade.txt
+  ansible.builtin.command: sort -u /home/vagrant/rancher-images-upgrade.txt -o /home/vagrant/rancher-images-upgrade.txt
+  register: sort_result_of_rancher_images_upgrade_txt
+
+- name: debug sort_result_of_rancher_images_upgrade_txt
+  ansible.builtin.debug:
+    msg: "{{ sort_result_of_rancher_images_upgrade_txt }}"
+  ignore_errors: true
+
+- name: download upgrade rancher images load sh
+  ansible.builtin.get_url:
+    url: "{{ settings.docker_registry.rancher_upgrade_images_load_sh }}"
+    dest: /home/vagrant/rancher-load-images-upgrade.sh
+  register: rancher_upgrade_images_load_sh_result
+
+- name: debug upgrade rancher images load sh
+  ansible.builtin.debug:
+    msg: "{{ rancher_upgrade_images_load_sh_result }}"
+  ignore_errors: true
+
+- name: make load images upgrade shell executable
+  ansible.builtin.file:
+    path: /home/vagrant/rancher-load-images-upgrade.sh
+    mode: '0755'
+  register: rancher_load_images_upgrade_sh_executable_result
+
+- name: acquire rancher upgrade images
+  ansible.builtin.command: /home/vagrant/rancher-save-images-upgrade.sh --image-list /home/vagrant/rancher-images-upgrade.txt
+  register: rancher_upgrade_image_acquired_result
+
+- name: debug rancher_upgrade_image_acquired_result
+  ansible.builtin.debug:
+    msg: "{{ rancher_upgrade_image_acquired_result }}"
+  ignore_errors: true
+
+- name: load in rancher upgrade images to private registry
+  ansible.builtin.command: /home/vagrant/rancher-load-images-upgrade.sh --image-list /home/vagrant/rancher-images-upgrade.txt --registry {{ settings.docker_registry.ip }}:5000
+  register: load_upgrade_to_private_registry_result
+
+- name: debug load_upgrade_to_private_registry_result
+  ansible.builtin.debug:
+    msg: "{{ load_upgrade_to_private_registry_result }}"
+  ignore_errors: true
+

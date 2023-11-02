@@ -1,0 +1,27 @@
+version: 0.1
+log:
+  accesslog:
+    disabled: false
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+http:
+  addr: :5000
+  secret: testingsecret
+  headers:
+    X-Content-Type-Options: [nosniff]
+  tls:
+    certificate: /certs/public.crt
+    key: /certs/private.key
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+    maxthreads: 8
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

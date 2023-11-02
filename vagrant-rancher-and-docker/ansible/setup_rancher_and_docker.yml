@@ -1,0 +1,43 @@
+---
+- name: Setup Harvester
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+  - name: create "Installing Docker Registry Server" message
+    shell: >
+      figlet "Installing Docker Registry Server" 2>/dev/null || echo "Installing Docker Registry Server"
+    register: figlet_result
+
+  - name: print Installing Docker Registry Server
+    debug:
+      msg: "{{ figlet_result.stdout }}"
+
+  - name: install Docker Registry server
+    shell: >
+      VAGRANT_LOG=debug vagrant up docker_registry
+    register: docker_registry_installation_result
+
+  - name: display Docker Registry server installation result
+    debug:
+      msg: "{{ docker_registry_installation_result.stdout }}"
+
+  - name: create "installing k3s and rancher on node" message
+    shell: >
+      figlet "installing k3s and rancher on node" 2>/dev/null || echo "installing k3s and rancher on node"
+    register: figlet_result
+
+  - name: print installing k3s and rancher on node
+    debug:
+      msg: "{{ figlet_result.stdout }}"
+
+  - name: install k3s and rancher on node
+    shell: >
+      VAGRANT_LOG=debug vagrant up rancher_node
+    register: rancher_node_installation_result
+
+  - name: debug rancher_node_installation_result
+    debug:
+      msg: "{{ rancher_node_installation_result.stdout }}"
+    ignore_errors: true
